@@ -103,8 +103,16 @@ class TestASRService(unittest.TestCase):
         self.assertEqual(provider1, "openrouter")
         provider2 = self.service.detect_provider("qwen-audio-3.0-asr-flash-filetrans")
         self.assertEqual(provider2, "dashscope")
+        provider3 = self.service.detect_provider("sensevoice-v1")
+        self.assertEqual(provider3, "dashscope")
+        provider4 = self.service.detect_provider("paraformer-v2")
+        self.assertEqual(provider4, "dashscope")
 
-        # 2. OpenRouter verbose_json parsing
+        # 2. Key mismatch detection
+        with self.assertRaises(ValueError):
+            self.service.get_api_key("sk-or-v1-fake-openrouter-key", provider="dashscope")
+
+        # 3. OpenRouter verbose_json parsing
         mock_or_result = {
             "text": "使用 OpenRouter 的 Qwen3 ASR Flash 模型进行智能转写。",
             "duration": 4.5,

@@ -293,19 +293,57 @@ class ASRService:
     def detect_provider(self, model: str, api_key: Optional[str] = None) -> str:
         """Detect whether to route to OpenRouter or DashScope."""
         model_lower = (model or "").lower().strip()
+        
+        # 1. DashScope native models
+        dashscope_identifiers = [
+            "qwen-audio-3.0-asr-flash-filetrans",
+            "qwen3-asr-flash-filetrans",
+            "qwen-audio-asr",
+            "sensevoice-v1",
+            "paraformer-v2",
+            "paraformer-8k-v2",
+            "paraformer",
+            "sensevoice",
+        ]
+        for ds_id in dashscope_identifiers:
+            if model_lower == ds_id or model_lower.startswith(ds_id):
+                return "dashscope"
+
+        # 2. OpenRouter models
         if (
             model_lower.startswith("qwen/")
             or "/" in model_lower
             or "openrouter" in model_lower
         ):
             return "openrouter"
+
         if api_key and (api_key.startswith("sk-or-") or api_key.startswith("sk-or-v1-")):
             return "openrouter"
         return "dashscope"
 
     def get_api_key(self, provided_key: Optional[str] = None, provider: str = "dashscope") -> str:
-        if provided_key and provided_key.strip():
-            return provided_key.strip()
+        if provided_key and provided_key.strip() and provided_key != "configured_in_env":
+            k = provided_key.strip()
+            # Mismatch detection: If user passed an OpenRouter key for DashScope model
+            if provider == "dashscope" and (k.startswith("sk-or-") or k.startswith("sk-or-v1-")):
+                env_key = os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
+                if env_key:
+                    return env_key
+                raise ValueError(
+                    "检测到当前选择的是阿里云百炼模型 (DashScope)，但传入了 OpenRouter API Key。\n"
+                    "请点击右上角【设置】->【阿里云百炼】，填入以 sk- 开头的 DashScope API Key，或切换为 OpenRouter 模型。"
+                )
+            # Mismatch detection: If user passed DashScope key for OpenRouter model
+            elif provider == "openrouter" and not (k.startswith("sk-or-") or k.startswith("sk-or-v1-")):
+                env_key = os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
+                if env_key:
+                    return env_key
+                raise ValueError(
+                    "检测到当前选择的是 OpenRouter 模型，但传入的不是 OpenRouter Key (sk-or-v1-...)。\n"
+                    "请点击右上角【设置】->【OpenRouter】，填入有效的 OpenRouter API Key。"
+                )
+            return k
+
         if provider == "openrouter":
             return os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
         return os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
@@ -817,7 +855,18 @@ class ASRService:
             raise RuntimeError(f"DashScope API call failed: {str(e)}")
 
         if response.status_code != 200:
-            err_msg = f"Task submission failed (status {response.status_code}): {response.code} - {response.message}"
+            err_code = getattr(response, "code", "") or ""
+            err_text = getattr(response, "message", "") or ""
+            if "InvalidApiKey" in err_code or "Invalid API-key" in err_text:
+                endpoint_hint = f" (当前请求端点: {effective_base_url})" if base_url else ""
+                err_msg = (
+                    f"阿里云百炼 API 认证失败: Invalid API-key provided.{endpoint_hint}\n"
+                    "排查建议:\n"
+                    "1. 请在【设置】->【阿里云百炼】中确认 DashScope API Key 是否正确输入。\n"
+                    "2. 若您的 Key 属于阿里云百炼新加坡区或专属工作区，请在设置中配置对应的 API Base URL (例如: https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1)。"
+                )
+            else:
+                err_msg = f"DashScope 任务提交失败 (HTTP {response.status_code}): {err_code} - {err_text}"
             logger.error(err_msg)
             raise RuntimeError(err_msg)
 

@@ -63,13 +63,26 @@
   };
 
   function syncActiveState() {
-    if (state.activeProvider === 'openrouter') {
+    // If activeProvider is explicitly dashscope, or if the current model is a known DashScope model
+    const dsModels = [
+      'qwen-audio-3.0-asr-flash-filetrans',
+      'qwen3-asr-flash-filetrans',
+      'qwen-audio-asr',
+      'sensevoice-v1',
+      'paraformer-v2',
+      'paraformer-8k-v2',
+    ];
+    const isDs = state.activeProvider === 'dashscope' || (state.model && dsModels.some(m => state.model.startsWith(m)));
+
+    if (!isDs) {
+      state.activeProvider = 'openrouter';
       state.apiKey = state.openrouterApiKey;
-      state.model = state.openrouterModel;
+      state.model = state.openrouterModel || 'qwen/qwen3-asr-flash-2026-02-10';
       state.baseUrl = '';
     } else {
+      state.activeProvider = 'dashscope';
       state.apiKey = state.dashscopeApiKey;
-      state.model = state.dashscopeModel;
+      state.model = state.dashscopeModel || 'qwen-audio-3.0-asr-flash-filetrans';
       state.baseUrl = state.dashscopeBaseUrl;
     }
   }
@@ -187,8 +200,12 @@
     panePreferences: document.getElementById('panePreferences'),
     dotOpenRouter: document.getElementById('dotOpenRouter'),
     dotAlibaba: document.getElementById('dotAlibaba'),
+    bannerCardOpenRouter: document.getElementById('bannerCardOpenRouter'),
+    bannerCardAlibaba: document.getElementById('bannerCardAlibaba'),
     radioProviderOpenRouter: document.getElementById('radioProviderOpenRouter'),
     radioProviderDashScope: document.getElementById('radioProviderDashScope'),
+    labelProviderOpenRouter: document.getElementById('labelProviderOpenRouter'),
+    labelProviderDashScope: document.getElementById('labelProviderDashScope'),
 
     // OpenRouter Settings
     settingOpenRouterApiKey: document.getElementById('settingOpenRouterApiKey'),
@@ -378,6 +395,26 @@
     }
   }
 
+  function updateProviderBanners() {
+    const isOr = state.activeProvider === 'openrouter';
+    if (el.bannerCardOpenRouter) {
+      el.bannerCardOpenRouter.classList.toggle('active-provider', isOr);
+    }
+    if (el.bannerCardAlibaba) {
+      el.bannerCardAlibaba.classList.toggle('active-provider', !isOr);
+    }
+    if (el.labelProviderOpenRouter) {
+      el.labelProviderOpenRouter.textContent = isOr ? '当前使用中' : '设为当前使用';
+    }
+    if (el.labelProviderDashScope) {
+      el.labelProviderDashScope.textContent = !isOr ? '当前使用中' : '设为当前使用';
+    }
+    if (el.radioProviderOpenRouter) el.radioProviderOpenRouter.checked = isOr;
+    if (el.radioProviderDashScope) el.radioProviderDashScope.checked = !isOr;
+    if (el.dotOpenRouter) el.dotOpenRouter.classList.toggle('hidden', !isOr);
+    if (el.dotAlibaba) el.dotAlibaba.classList.toggle('hidden', isOr);
+  }
+
   function updateUIHeader() {
     syncActiveState();
     const hasKey = Boolean(state.apiKey && state.apiKey.length > 3);
@@ -390,19 +427,7 @@
       el.setupStatusDot.title = hasKey ? `API Key 已配置 (${state.activeProvider})` : 'API Key 未配置，点击设置';
     }
 
-    // Update active dots on tabs
-    if (el.dotOpenRouter) {
-      el.dotOpenRouter.classList.toggle('hidden', state.activeProvider !== 'openrouter');
-    }
-    if (el.dotAlibaba) {
-      el.dotAlibaba.classList.toggle('hidden', state.activeProvider !== 'dashscope');
-    }
-    if (el.radioProviderOpenRouter) {
-      el.radioProviderOpenRouter.checked = state.activeProvider === 'openrouter';
-    }
-    if (el.radioProviderDashScope) {
-      el.radioProviderDashScope.checked = state.activeProvider === 'dashscope';
-    }
+    updateProviderBanners();
   }
 
   function showToast(message, duration = 3000) {
@@ -1481,6 +1506,8 @@
       }
     } else {
       if (el.settingOpenRouterCustomModel) el.settingOpenRouterCustomModel.classList.add('hidden');
+      state.openrouterModel = e.target.value;
+      setActiveProvider('openrouter');
     }
   }
 
@@ -1492,6 +1519,8 @@
       }
     } else {
       if (el.settingDashScopeCustomModel) el.settingDashScopeCustomModel.classList.add('hidden');
+      state.dashscopeModel = e.target.value;
+      setActiveProvider('dashscope');
     }
   }
 

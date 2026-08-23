@@ -370,7 +370,7 @@
         <div class="modal-body">
           <!-- ==================== Tab Pane 1: OpenRouter ==================== -->
           <div id="paneOpenRouter" class="settings-tab-pane">
-            <div class="provider-banner-card">
+            <div class="provider-banner-card active-provider" id="bannerCardOpenRouter">
               <div class="provider-banner-info">
                 <div class="provider-badge-icon">🌟</div>
                 <div>
@@ -380,7 +380,7 @@
               </div>
               <label class="provider-active-toggle" title="设为当前生效服务商">
                 <input type="radio" name="active_provider_choice" value="openrouter" id="radioProviderOpenRouter" checked>
-                <span>当前使用</span>
+                <span id="labelProviderOpenRouter">当前使用中</span>
               </label>
             </div>
 
@@ -437,7 +437,7 @@
 
           <!-- ==================== Tab Pane 2: Alibaba Cloud ==================== -->
           <div id="paneAlibaba" class="settings-tab-pane hidden">
-            <div class="provider-banner-card">
+            <div class="provider-banner-card" id="bannerCardAlibaba">
               <div class="provider-banner-info">
                 <div class="provider-badge-icon">☁️</div>
                 <div>
@@ -447,7 +447,7 @@
               </div>
               <label class="provider-active-toggle" title="设为当前生效服务商">
                 <input type="radio" name="active_provider_choice" value="dashscope" id="radioProviderDashScope">
-                <span>当前使用</span>
+                <span id="labelProviderDashScope">设为当前使用</span>
               </label>
             </div>
 

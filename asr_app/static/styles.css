@@ -1159,16 +1159,17 @@ body {
   animation: fadeIn 0.2s ease-in-out;
 }
 
-/* Provider Banner Card */
+/* Provider Banner Card - Default Gray */
 .provider-banner-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 0.85rem 1.1rem;
   gap: 1rem;
+  transition: all 0.2s ease-in-out;
 }
 
 .provider-banner-info {
@@ -1179,19 +1180,23 @@ body {
 
 .provider-badge-icon {
   font-size: 1.4rem;
+  filter: grayscale(40%);
+  transition: filter 0.2s ease;
 }
 
 .provider-banner-info h4 {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #166534;
+  color: var(--text-main);
   margin-bottom: 0.15rem;
+  transition: color 0.2s ease;
 }
 
 .provider-banner-info p {
   font-size: 0.775rem;
-  color: #15803d;
+  color: var(--text-muted);
   margin: 0;
+  transition: color 0.2s ease;
 }
 
 .provider-active-toggle {
@@ -1200,23 +1205,55 @@ body {
   gap: 0.4rem;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #166534;
+  color: var(--text-muted);
   background: #ffffff;
   padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  border: 1px solid #86efac;
+  border: 1px solid var(--border-color);
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
 }
 
 .provider-active-toggle:hover {
-  background: #f0fdf4;
-  border-color: #4ade80;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--text-main);
 }
 
 .provider-active-toggle input {
   cursor: pointer;
+}
+
+/* Active State: Vibrant emerald green only when selected */
+.provider-banner-card.active-provider {
+  background: #f0fdf4;
+  border-color: #86efac;
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.08);
+}
+
+.provider-banner-card.active-provider .provider-badge-icon {
+  filter: none;
+}
+
+.provider-banner-card.active-provider .provider-banner-info h4 {
+  color: #166534;
+}
+
+.provider-banner-card.active-provider .provider-banner-info p {
+  color: #15803d;
+}
+
+.provider-banner-card.active-provider .provider-active-toggle {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+.provider-banner-card.active-provider .provider-active-toggle:hover {
+  background: #15803d;
+  border-color: #15803d;
 }
 
 .modal-body {
