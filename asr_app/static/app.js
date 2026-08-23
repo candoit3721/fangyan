@@ -86,7 +86,9 @@
     toggleHistoryBtn: document.getElementById('toggleHistoryBtn'),
     lockAppBtn: document.getElementById('lockAppBtn'),
     loginModal: document.getElementById('loginModal'),
+    loginForm: document.getElementById('loginForm'),
     loginPasscodeInput: document.getElementById('loginPasscodeInput'),
+    toggleLoginPasscodeVisibility: document.getElementById('toggleLoginPasscodeVisibility'),
     submitLoginBtn: document.getElementById('submitLoginBtn'),
     loginErrorMsg: document.getElementById('loginErrorMsg'),
 
@@ -96,65 +98,74 @@
     recordPanel: document.getElementById('recordPanel'),
     uploadPanel: document.getElementById('uploadPanel'),
 
-    // Recording Controls
+    // Recorder Controls
+    visualizerCanvas: document.getElementById('visualizerCanvas'),
+    recordingTimer: document.getElementById('recordingTimer'),
     startRecordBtn: document.getElementById('startRecordBtn'),
-    micBtnCenter: document.getElementById('micBtnCenter'),
-    recordStatusText: document.getElementById('recordStatusText'),
-    recordTimerDisplay: document.getElementById('recordTimerDisplay'),
-    waveformCanvas: document.getElementById('waveformCanvas'),
-    recordActionsBar: document.getElementById('recordActionsBar'),
+    recordingActiveActions: document.getElementById('recordingActiveActions'),
     pauseRecordBtn: document.getElementById('pauseRecordBtn'),
-    resumeRecordBtn: document.getElementById('resumeRecordBtn'),
+    pauseIcon: document.getElementById('pauseIcon'),
     stopRecordBtn: document.getElementById('stopRecordBtn'),
-    discardRecordBtn: document.getElementById('discardRecordBtn'),
+    cancelRecordBtn: document.getElementById('cancelRecordBtn'),
+    recordingStatusHint: document.getElementById('recordingStatusHint'),
+    recordedPreviewCard: document.getElementById('recordedPreviewCard'),
+    recordedAudioPlayer: document.getElementById('recordedAudioPlayer'),
+    recordedDurationTag: document.getElementById('recordedDurationTag'),
+    transcribeRecordedBtn: document.getElementById('transcribeRecordedBtn'),
+    reRecordBtn: document.getElementById('reRecordBtn'),
 
     // Upload Controls
     dropZone: document.getElementById('dropZone'),
-    audioFileInput: document.getElementById('audioFileInput'),
-    browseFileBtn: document.getElementById('browseFileBtn'),
-    selectedFileInfo: document.getElementById('selectedFileInfo'),
-    selectedFileName: document.getElementById('selectedFileName'),
-    selectedFileSize: document.getElementById('selectedFileSize'),
+    fileInput: document.getElementById('fileInput'),
+    uploadedFileCard: document.getElementById('uploadedFileCard'),
+    uploadedFileName: document.getElementById('uploadedFileName'),
+    uploadedFileSize: document.getElementById('uploadedFileSize'),
+    uploadedAudioPlayer: document.getElementById('uploadedAudioPlayer'),
     removeFileBtn: document.getElementById('removeFileBtn'),
-    startUploadBtn: document.getElementById('startUploadBtn'),
+    transcribeUploadedBtn: document.getElementById('transcribeUploadedBtn'),
 
-    // Banners & Notifications
+    // Progress
+    processingCard: document.getElementById('processingCard'),
+    progressTitle: document.getElementById('progressTitle'),
+    progressSubtitle: document.getElementById('progressSubtitle'),
+    progressBarFill: document.getElementById('progressBarFill'),
+    progressTaskId: document.getElementById('progressTaskId'),
+    progressTimer: document.getElementById('progressTimer'),
+
+    // Error
     errorBanner: document.getElementById('errorBanner'),
     errorMessage: document.getElementById('errorMessage'),
     closeErrorBtn: document.getElementById('closeErrorBtn'),
 
-    // Processing & Progress
-    progressCard: document.getElementById('progressCard'),
-    progressStatusText: document.getElementById('progressStatusText'),
-    progressDetailText: document.getElementById('progressDetailText'),
-    progressBarFill: document.getElementById('progressBarFill'),
-    progressCancelBtn: document.getElementById('progressCancelBtn'),
-
     // Results Section
-    resultSection: document.getElementById('resultSection'),
+    resultsSection: document.getElementById('resultsSection'),
     globalSyncAudio: document.getElementById('globalSyncAudio'),
-    playAudioBtn: document.getElementById('playAudioBtn'),
-    audioTimeDisplay: document.getElementById('audioTimeDisplay'),
-    audioTrackSlider: document.getElementById('audioTrackSlider'),
-    audioSpeedSelect: document.getElementById('audioSpeedSelect'),
+    playerPlayBtn: document.getElementById('playerPlayBtn'),
+    playerPlayIcon: document.getElementById('playerPlayIcon'),
+    playerPauseIcon: document.getElementById('playerPauseIcon'),
+    playerCurrentTime: document.getElementById('playerCurrentTime'),
+    playerTotalTime: document.getElementById('playerTotalTime'),
+    playerScrubber: document.getElementById('playerScrubber'),
+    nowPlayingSentence: document.getElementById('nowPlayingSentence'),
+    playbackSpeedSelect: document.getElementById('playbackSpeedSelect'),
 
-    // Result Tabs
-    viewKaraokeBtn: document.getElementById('viewKaraokeBtn'),
-    viewPlainBtn: document.getElementById('viewPlainBtn'),
+    // Views
+    viewDialogueBtn: document.getElementById('viewDialogueBtn'),
+    viewDocumentBtn: document.getElementById('viewDocumentBtn'),
     viewSrtBtn: document.getElementById('viewSrtBtn'),
     viewJsonBtn: document.getElementById('viewJsonBtn'),
-
-    karaokeViewPane: document.getElementById('karaokeViewPane'),
-    plainTextViewPane: document.getElementById('plainTextViewPane'),
+    dialogueViewPane: document.getElementById('dialogueViewPane'),
+    documentViewPane: document.getElementById('documentViewPane'),
     srtViewPane: document.getElementById('srtViewPane'),
     jsonViewPane: document.getElementById('jsonViewPane'),
 
-    karaokeSentencesList: document.getElementById('karaokeSentencesList'),
-    plainTextContent: document.getElementById('plainTextContent'),
+    sentenceList: document.getElementById('sentenceList'),
+    fullDocumentText: document.getElementById('fullDocumentText'),
     srtCodeBlock: document.getElementById('srtCodeBlock'),
     jsonCodeBlock: document.getElementById('jsonCodeBlock'),
+    transcriptSearchInput: document.getElementById('transcriptSearchInput'),
 
-    // Metadata
+    // Meta
     metaModelName: document.getElementById('metaModelName'),
     metaDuration: document.getElementById('metaDuration'),
     metaSentenceCount: document.getElementById('metaSentenceCount'),
@@ -431,76 +442,88 @@
     }
 
     // Mode Tabs
-    el.tabRecordBtn.addEventListener('click', () => switchTab('record'));
-    el.tabUploadBtn.addEventListener('click', () => switchTab('upload'));
+    if (el.tabRecordBtn) el.tabRecordBtn.addEventListener('click', () => switchTab('record'));
+    if (el.tabUploadBtn) el.tabUploadBtn.addEventListener('click', () => switchTab('upload'));
 
     // Recorder Controls
-    el.startRecordBtn.addEventListener('click', startRecording);
-    el.pauseRecordBtn.addEventListener('click', togglePauseRecording);
-    el.stopRecordBtn.addEventListener('click', stopRecording);
-    el.cancelRecordBtn.addEventListener('click', cancelRecording);
-    el.reRecordBtn.addEventListener('click', cancelRecording);
-    el.transcribeRecordedBtn.addEventListener('click', () => submitTranscription('record'));
+    if (el.startRecordBtn) el.startRecordBtn.addEventListener('click', startRecording);
+    if (el.pauseRecordBtn) el.pauseRecordBtn.addEventListener('click', togglePauseRecording);
+    if (el.stopRecordBtn) el.stopRecordBtn.addEventListener('click', stopRecording);
+    if (el.cancelRecordBtn) el.cancelRecordBtn.addEventListener('click', cancelRecording);
+    if (el.reRecordBtn) el.reRecordBtn.addEventListener('click', cancelRecording);
+    if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.addEventListener('click', () => submitTranscription('record'));
 
     // File Upload
-    el.dropZone.addEventListener('dragover', handleDragOver);
-    el.dropZone.addEventListener('dragleave', handleDragLeave);
-    el.dropZone.addEventListener('drop', handleFileDrop);
-    el.fileInput.addEventListener('change', handleFileSelect);
-    el.removeFileBtn.addEventListener('click', clearUploadedFile);
-    el.transcribeUploadedBtn.addEventListener('click', () => submitTranscription('upload'));
+    if (el.dropZone) {
+      el.dropZone.addEventListener('dragover', handleDragOver);
+      el.dropZone.addEventListener('dragleave', handleDragLeave);
+      el.dropZone.addEventListener('drop', handleFileDrop);
+    }
+    if (el.fileInput) el.fileInput.addEventListener('change', handleFileSelect);
+    if (el.removeFileBtn) el.removeFileBtn.addEventListener('click', clearUploadedFile);
+    if (el.transcribeUploadedBtn) el.transcribeUploadedBtn.addEventListener('click', () => submitTranscription('upload'));
 
     // Error Close
-    el.closeErrorBtn.addEventListener('click', hideError);
+    if (el.closeErrorBtn) el.closeErrorBtn.addEventListener('click', hideError);
 
     // Synchronized Player Controls
-    el.playerPlayBtn.addEventListener('click', togglePlayAudio);
-    el.playerScrubber.addEventListener('input', handleScrubberSeek);
-    el.playbackSpeedSelect.addEventListener('change', (e) => {
-      el.globalSyncAudio.playbackRate = parseFloat(e.target.value);
-    });
-    el.globalSyncAudio.addEventListener('timeupdate', handleAudioTimeUpdate);
-    el.globalSyncAudio.addEventListener('ended', handleAudioEnded);
-    el.globalSyncAudio.addEventListener('play', () => {
-      el.playerPlayIcon.classList.add('hidden');
-      el.playerPauseIcon.classList.remove('hidden');
-    });
-    el.globalSyncAudio.addEventListener('pause', () => {
-      el.playerPlayIcon.classList.remove('hidden');
-      el.playerPauseIcon.classList.add('hidden');
-    });
+    if (el.playerPlayBtn) el.playerPlayBtn.addEventListener('click', togglePlayAudio);
+    if (el.playerScrubber) el.playerScrubber.addEventListener('input', handleScrubberSeek);
+    if (el.playbackSpeedSelect) {
+      el.playbackSpeedSelect.addEventListener('change', (e) => {
+        if (el.globalSyncAudio) el.globalSyncAudio.playbackRate = parseFloat(e.target.value);
+      });
+    }
+    if (el.globalSyncAudio) {
+      el.globalSyncAudio.addEventListener('timeupdate', handleAudioTimeUpdate);
+      el.globalSyncAudio.addEventListener('ended', handleAudioEnded);
+      el.globalSyncAudio.addEventListener('play', () => {
+        if (el.playerPlayIcon) el.playerPlayIcon.classList.add('hidden');
+        if (el.playerPauseIcon) el.playerPauseIcon.classList.remove('hidden');
+      });
+      el.globalSyncAudio.addEventListener('pause', () => {
+        if (el.playerPlayIcon) el.playerPlayIcon.classList.remove('hidden');
+        if (el.playerPauseIcon) el.playerPauseIcon.classList.add('hidden');
+      });
+    }
 
     // Transcript Views Switcher
-    el.viewDialogueBtn.addEventListener('click', () => switchTranscriptView('dialogue'));
-    el.viewDocumentBtn.addEventListener('click', () => switchTranscriptView('document'));
-    el.viewSrtBtn.addEventListener('click', () => switchTranscriptView('srt'));
-    el.viewJsonBtn.addEventListener('click', () => switchTranscriptView('json'));
+    if (el.viewDialogueBtn) el.viewDialogueBtn.addEventListener('click', () => switchTranscriptView('dialogue'));
+    if (el.viewDocumentBtn) el.viewDocumentBtn.addEventListener('click', () => switchTranscriptView('document'));
+    if (el.viewSrtBtn) el.viewSrtBtn.addEventListener('click', () => switchTranscriptView('srt'));
+    if (el.viewJsonBtn) el.viewJsonBtn.addEventListener('click', () => switchTranscriptView('json'));
 
     // Search
-    el.transcriptSearchInput.addEventListener('input', handleSearch);
+    if (el.transcriptSearchInput) el.transcriptSearchInput.addEventListener('input', handleSearch);
 
     // Export Dropdown
-    el.exportDropdownBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      el.exportMenu.classList.toggle('hidden');
-    });
-    document.addEventListener('click', () => {
-      el.exportMenu.classList.add('hidden');
-    });
-    el.exportMenu.querySelectorAll('[data-export]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const fmt = btn.getAttribute('data-export');
-        exportTranscript(fmt);
+    if (el.exportDropdownBtn) {
+      el.exportDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (el.exportMenu) el.exportMenu.classList.toggle('hidden');
       });
+    }
+    document.addEventListener('click', () => {
+      if (el.exportMenu) el.exportMenu.classList.add('hidden');
     });
-    el.copyAllTextBtn.addEventListener('click', copyFullText);
+    if (el.exportMenu) {
+      el.exportMenu.querySelectorAll('[data-export]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const fmt = btn.getAttribute('data-export');
+          exportTranscript(fmt);
+        });
+      });
+    }
+    if (el.copyAllTextBtn) el.copyAllTextBtn.addEventListener('click', copyFullText);
 
     // Settings Modal
-    el.openSettingsBtn.addEventListener('click', openSettingsModal);
-    el.closeSettingsBtn.addEventListener('click', closeSettingsModal);
-    el.settingsModal.addEventListener('click', (e) => {
-      if (e.target === el.settingsModal) closeSettingsModal();
-    });
+    if (el.openSettingsBtn) el.openSettingsBtn.addEventListener('click', openSettingsModal);
+    if (el.closeSettingsBtn) el.closeSettingsBtn.addEventListener('click', closeSettingsModal);
+    if (el.settingsModal) {
+      el.settingsModal.addEventListener('click', (e) => {
+        if (e.target === el.settingsModal) closeSettingsModal();
+      });
+    }
 
     // Tab Navigation
     if (el.tabBtnOpenRouter) el.tabBtnOpenRouter.addEventListener('click', () => switchSettingsTab('openrouter'));
@@ -550,14 +573,16 @@
     });
 
     // History Drawer
-    el.toggleHistoryBtn.addEventListener('click', openHistoryDrawer);
-    el.closeHistoryBtn.addEventListener('click', closeHistoryDrawer);
+    if (el.toggleHistoryBtn) el.toggleHistoryBtn.addEventListener('click', openHistoryDrawer);
+    if (el.closeHistoryBtn) el.closeHistoryBtn.addEventListener('click', closeHistoryDrawer);
     if (el.clearAllHistoryBtn) {
       el.clearAllHistoryBtn.addEventListener('click', clearAllHistory);
     }
-    el.historyDrawer.addEventListener('click', (e) => {
-      if (e.target === el.historyDrawer) closeHistoryDrawer();
-    });
+    if (el.historyDrawer) {
+      el.historyDrawer.addEventListener('click', (e) => {
+        if (e.target === el.historyDrawer) closeHistoryDrawer();
+      });
+    }
   }
 
   function switchTab(mode) {
