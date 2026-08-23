@@ -1656,12 +1656,7 @@
       localStorage.setItem('asr_dashscope_model', dsModel);
     }
 
-    // Active Provider
-    if (el.radioProviderDashScope && el.radioProviderDashScope.checked) {
-      state.activeProvider = 'dashscope';
-    } else {
-      state.activeProvider = 'openrouter';
-    }
+    // 3. Active Provider: Persist current active choice
     localStorage.setItem('asr_active_provider', state.activeProvider);
 
     // 3. Preferences
