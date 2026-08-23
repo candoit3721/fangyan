@@ -20,5 +20,8 @@ services:
       - key: DASHSCOPE_API_KEY
         sync: false
         # Optional: DashScope API Key for native Alibaba Cloud models
+      - key: DASHSCOPE_BASE_URL
+        sync: false
+        # Optional: Custom DashScope Base URL (e.g. https://ws-xxx.ap-southeast-1.maas.aliyuncs.com/api/v1)
       - key: PYTHONUNBUFFERED
         value: "1"

@@ -215,6 +215,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         if path == "/api/config":
             has_dashscope_key = bool(os.environ.get("DASHSCOPE_API_KEY", "").strip())
             has_openrouter_key = bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
+            dashscope_base_url = os.environ.get("DASHSCOPE_BASE_URL", "").strip() or os.environ.get("DASHSCOPE_HTTP_BASE_URL", "").strip()
             auth_required = self._is_auth_required()
 
             masked_dashscope_key = ""
@@ -233,6 +234,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                 "has_env_api_key": has_openrouter_key or has_dashscope_key,
                 "has_openrouter_key": has_openrouter_key,
                 "has_dashscope_key": has_dashscope_key,
+                "dashscope_base_url": dashscope_base_url,
                 "masked_openrouter_key": masked_openrouter_key,
                 "masked_dashscope_key": masked_dashscope_key,
                 "auth_required": auth_required,
@@ -407,7 +409,8 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
             try:
                 req_data = json.loads(body) if body else {}
                 api_key = req_data.get("api_key") or self.headers.get("X-DashScope-Api-Key", "")
-                result = asr_service.verify_api_key(api_key)
+                base_url = req_data.get("base_url") or self.headers.get("X-DashScope-Base-Url", "")
+                result = asr_service.verify_api_key(api_key, base_url=base_url)
                 return self._send_json(result)
             except Exception as e:
                 return self._send_error(str(e), 400)
@@ -552,10 +555,11 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         disfluency_removal = str(fields.get("disfluency_removal_enabled", "false")).lower() in ["true", "1", "yes"]
         timestamp_alignment = str(fields.get("timestamp_alignment_enabled", "false")).lower() in ["true", "1", "yes"]
         prompt = fields.get("prompt")
+        base_url = fields.get("base_url") or self.headers.get("X-DashScope-Base-Url")
 
         audio_url = f"/api/audio/{saved_filename}"
 
-        # Submit transcription to DashScope
+        # Submit transcription
         try:
             submit_res = asr_service.submit_transcription(
                 file_path=str(saved_filepath),
@@ -567,6 +571,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                 disfluency_removal_enabled=disfluency_removal,
                 timestamp_alignment_enabled=timestamp_alignment,
                 prompt=prompt,
+                base_url=base_url,
             )
         except Exception as e:
             # Clean up uploaded file on immediate error
@@ -640,6 +645,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         disfluency_removal = bool(data.get("disfluency_removal_enabled", False))
         timestamp_alignment = bool(data.get("timestamp_alignment_enabled", False))
         prompt = data.get("prompt")
+        base_url = data.get("base_url") or self.headers.get("X-DashScope-Base-Url")
 
         submit_res = asr_service.submit_transcription(
             file_path=str(saved_filepath),
@@ -651,6 +657,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
             disfluency_removal_enabled=disfluency_removal,
             timestamp_alignment_enabled=timestamp_alignment,
             prompt=prompt,
+            base_url=base_url,
         )
 
         task_id = submit_res.get("task_id")

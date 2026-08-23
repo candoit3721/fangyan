@@ -18,3 +18,6 @@ asr_app/data/history.json
 tmp/
 .pytest_cache/
 .coverage
+*ref*.txt
+*.key
+*.local

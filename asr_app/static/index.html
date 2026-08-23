@@ -368,6 +368,22 @@
             <div id="keyValidationResult" class="form-hint">支持在浏览器本地保存，或配置系统环境变量 <code>OPENROUTER_API_KEY</code> / <code>DASHSCOPE_API_KEY</code></div>
           </div>
 
+          <!-- API Base URL / Endpoint (Optional) -->
+          <div class="form-group">
+            <label class="form-label" for="settingBaseUrl">
+              <span>API Base URL / 服务端点 (可选)</span>
+              <span class="text-muted text-xs">阿里云百炼新加坡区 / 自定义工作区</span>
+            </label>
+            <input type="text" id="settingBaseUrl" class="form-input font-mono" placeholder="例如: https://ws-xxx.ap-southeast-1.maas.aliyuncs.com/api/v1">
+            <div class="endpoint-presets-bar">
+              <span class="text-xs text-muted">快捷端点:</span>
+              <button type="button" class="preset-tag" data-url="https://dashscope.aliyuncs.com/api/v1">🇨🇳 百炼默认(北京)</button>
+              <button type="button" class="preset-tag" data-url="https://dashscope-intl.aliyuncs.com/api/v1">🇸🇬 百炼国际(新加坡)</button>
+              <button type="button" class="preset-tag" data-url="https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1">🏢 新加坡工作区</button>
+            </div>
+            <div class="form-hint">如使用阿里云百炼新加坡区或专属工作区，请填入对应地址；系统会自动适配 <code>/api/v1</code></div>
+          </div>
+
           <!-- Model Selection -->
           <div class="form-group">
             <label class="form-label" for="settingModelSelect">

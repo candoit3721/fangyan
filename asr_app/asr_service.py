@@ -224,9 +224,30 @@ class ASRService:
         self,
         default_dashscope_key: Optional[str] = None,
         default_openrouter_key: Optional[str] = None,
+        default_dashscope_base_url: Optional[str] = None,
     ):
         self.default_dashscope_key = default_dashscope_key or os.environ.get("DASHSCOPE_API_KEY", "")
         self.default_openrouter_key = default_openrouter_key or os.environ.get("OPENROUTER_API_KEY", "")
+        self.default_dashscope_base_url = (
+            default_dashscope_base_url
+            or os.environ.get("DASHSCOPE_BASE_URL", "")
+            or os.environ.get("DASHSCOPE_HTTP_BASE_URL", "")
+        ).strip()
+
+    def normalize_dashscope_url(self, url: Optional[str]) -> str:
+        """Normalize DashScope / Model Studio base URL for REST & Transcription API."""
+        if not url or not url.strip():
+            return "https://dashscope.aliyuncs.com/api/v1"
+        raw = url.strip()
+        if not raw.startswith("http://") and not raw.startswith("https://"):
+            raw = f"https://{raw}"
+        raw = raw.rstrip("/")
+        # If user pasted OpenAI compatible-mode URL: https://ws-xxx/compatible-mode/v1 -> convert to /api/v1 for DashScope SDK
+        if raw.endswith("/compatible-mode/v1"):
+            raw = raw[:-len("/compatible-mode/v1")] + "/api/v1"
+        elif not raw.endswith("/api/v1"):
+            raw = f"{raw}/api/v1"
+        return raw
 
     def get_models(self) -> List[Dict[str, Any]]:
         """Return available models."""
@@ -289,8 +310,13 @@ class ASRService:
             return os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
         return os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
 
-    def verify_api_key(self, api_key: str, provider: Optional[str] = None) -> Dict[str, Any]:
-        """Test API key validity for OpenRouter or DashScope."""
+    def verify_api_key(
+        self,
+        api_key: str,
+        provider: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Test API key validity for OpenRouter or DashScope with optional custom base URL."""
         key = (api_key or "").strip()
         if not key:
             return {"valid": False, "message": "API key cannot be empty."}
@@ -322,16 +348,19 @@ class ASRService:
             try:
                 if len(key) < 10:
                     return {"valid": False, "provider": "dashscope", "message": "DashScope API Key 格式无效"}
+                
+                effective_base = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
                 resp = requests.get(
-                    "https://dashscope.aliyuncs.com/api/v1/tasks",
+                    f"{effective_base}/tasks",
                     headers={"Authorization": f"Bearer {key}"},
                     params={"page_no": 1, "page_size": 1},
                     timeout=10,
                 )
                 if resp.status_code in [200, 400, 404]:
-                    return {"valid": True, "provider": "dashscope", "message": "DashScope API Key 验证成功"}
+                    region_tag = "自定义端点" if base_url else "DashScope"
+                    return {"valid": True, "provider": "dashscope", "message": f"{region_tag} API Key 验证成功"}
                 elif resp.status_code in [401, 403]:
-                    return {"valid": False, "provider": "dashscope", "message": "DashScope 认证失败，API Key 无效"}
+                    return {"valid": False, "provider": "dashscope", "message": "DashScope 认证失败，API Key 或端点地址无效"}
                 else:
                     return {"valid": True, "provider": "dashscope", "message": "API Key 格式已识别"}
             except Exception as e:
@@ -352,6 +381,7 @@ class ASRService:
         timestamp_alignment_enabled: bool = False,
         prompt: Optional[str] = None,
         phrase_id: Optional[str] = None,
+        base_url: Optional[str] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """Submit transcription to either OpenRouter or DashScope."""
@@ -384,10 +414,11 @@ class ASRService:
                 language_hints=language_hints,
                 diarization_enabled=diarization_enabled,
                 speaker_count=speaker_count,
-                disfluency_removal_enabled=disfluency_removal,
-                timestamp_alignment_enabled=timestamp_alignment,
+                disfluency_removal_enabled=disfluency_removal_enabled,
+                timestamp_alignment_enabled=timestamp_alignment_enabled,
                 prompt=prompt,
                 phrase_id=phrase_id,
+                base_url=base_url,
                 **kwargs,
             )
 
@@ -739,6 +770,7 @@ class ASRService:
         timestamp_alignment_enabled: bool = False,
         prompt: Optional[str] = None,
         phrase_id: Optional[str] = None,
+        base_url: Optional[str] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """Submit an asynchronous transcription task to DashScope."""
@@ -768,7 +800,9 @@ class ASRService:
             if v is not None:
                 extra_kwargs[k] = v
 
-        logger.info(f"Submitting DashScope transcription for file: {file_path} with model: {model}")
+        effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
+        dashscope.base_http_api_url = effective_base_url
+        logger.info(f"Submitting DashScope transcription for file: {file_path} with model: {model} (Endpoint: {effective_base_url})")
         dashscope.api_key = api_key
 
         try:
@@ -803,6 +837,7 @@ class ASRService:
         self,
         task_id: str,
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Fetch current status and result of a transcription task."""
         # Check OpenRouter direct cache first
@@ -813,6 +848,8 @@ class ASRService:
         if not key:
             raise ValueError("DashScope API Key is required.")
 
+        effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
+        dashscope.base_http_api_url = effective_base_url
         dashscope.api_key = key
 
         try:

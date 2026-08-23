@@ -17,6 +17,7 @@
     authRequired: false,
 
     apiKey: localStorage.getItem('asr_api_key') || localStorage.getItem('dashscope_api_key') || '',
+    baseUrl: localStorage.getItem('asr_base_url') || '',
     model: localStorage.getItem('asr_model') || localStorage.getItem('dashscope_model') || 'qwen/qwen3-asr-flash-2026-02-10',
     languageHints: JSON.parse(localStorage.getItem('asr_lang_hints') || localStorage.getItem('dashscope_lang_hints') || '["zh"]'),
     diarization: localStorage.getItem('asr_diarization') === 'true',
@@ -158,6 +159,7 @@
     toggleKeyVisibilityBtn: document.getElementById('toggleKeyVisibilityBtn'),
     testKeyBtn: document.getElementById('testKeyBtn'),
     keyValidationResult: document.getElementById('keyValidationResult'),
+    settingBaseUrl: document.getElementById('settingBaseUrl'),
     settingModelSelect: document.getElementById('settingModelSelect'),
     refreshModelsBtn: document.getElementById('refreshModelsBtn'),
     settingCustomModel: document.getElementById('settingCustomModel'),
@@ -317,6 +319,9 @@
           state.apiKey = config.masked_openrouter_key || config.masked_dashscope_key || 'configured_in_env';
           updateUIHeader();
         }
+        if (config.dashscope_base_url && !state.baseUrl) {
+          state.baseUrl = config.dashscope_base_url;
+        }
       }
     } catch (e) {
       console.warn('Could not fetch server config:', e);
@@ -453,6 +458,16 @@
     });
     el.saveSettingsBtn.addEventListener('click', saveSettings);
     el.resetSettingsBtn.addEventListener('click', resetSettings);
+
+    // Endpoint preset tags
+    document.querySelectorAll('.preset-tag').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (el.settingBaseUrl && btn.dataset.url) {
+          el.settingBaseUrl.value = btn.dataset.url;
+          el.settingBaseUrl.focus();
+        }
+      });
+    });
 
     // History Drawer
     el.toggleHistoryBtn.addEventListener('click', openHistoryDrawer);
@@ -784,6 +799,9 @@
     formData.append('timestamp_alignment_enabled', state.alignTimestamps ? 'true' : 'false');
     if (state.prompt) {
       formData.append('prompt', state.prompt);
+    }
+    if (state.baseUrl) {
+      formData.append('base_url', state.baseUrl);
     }
 
     // UI Loading State
@@ -1178,6 +1196,11 @@
     el.settingAlignTimestamps.checked = state.alignTimestamps;
     el.settingPrompt.value = state.prompt || '';
 
+    // API Base URL
+    if (el.settingBaseUrl) {
+      el.settingBaseUrl.value = state.baseUrl || '';
+    }
+
     el.keyValidationResult.textContent = '支持在浏览器本地保存，或配置系统环境变量 OPENROUTER_API_KEY / DASHSCOPE_API_KEY';
     el.keyValidationResult.style.color = '';
 
@@ -1205,6 +1228,7 @@
     }
 
     const isOr = key.startsWith('sk-or-');
+    const baseUrl = el.settingBaseUrl ? el.settingBaseUrl.value.trim() : '';
     el.keyValidationResult.textContent = `🔄 正在测试 ${isOr ? 'OpenRouter' : 'DashScope'} 接口连接...`;
     el.keyValidationResult.style.color = '#9ca3af';
 
@@ -1212,7 +1236,7 @@
       const resp = await apiFetch('/api/verify_key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: key }),
+        body: JSON.stringify({ api_key: key, base_url: baseUrl }),
       });
       const data = await resp.json();
       if (data.valid) {
@@ -1288,6 +1312,13 @@
     localStorage.setItem('asr_api_key', keyVal);
     localStorage.setItem('dashscope_api_key', keyVal);
 
+    // Base URL
+    if (el.settingBaseUrl) {
+      const baseUrlVal = el.settingBaseUrl.value.trim();
+      state.baseUrl = baseUrlVal;
+      localStorage.setItem('asr_base_url', baseUrlVal);
+    }
+
     // Model
     let selectedModel = el.settingModelSelect.value;
     if (selectedModel === 'custom') {
@@ -1329,6 +1360,7 @@
 
   function resetSettings() {
     el.settingApiKey.value = '';
+    if (el.settingBaseUrl) el.settingBaseUrl.value = '';
     el.settingModelSelect.value = 'qwen/qwen3-asr-flash-2026-02-10';
     el.settingCustomModel.classList.add('hidden');
     el.langChipsContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
