@@ -170,9 +170,9 @@ class TestASRService(unittest.TestCase):
         os.remove(dummy_path)
 
     def test_normalize_dashscope_url(self):
-        # Default
-        self.assertEqual(self.service.normalize_dashscope_url(None), "https://dashscope.aliyuncs.com/api/v1")
-        self.assertEqual(self.service.normalize_dashscope_url(""), "https://dashscope.aliyuncs.com/api/v1")
+        # Default (Singapore Workspace Endpoint)
+        self.assertEqual(self.service.normalize_dashscope_url(None), "https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1")
+        self.assertEqual(self.service.normalize_dashscope_url(""), "https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1")
 
         # Raw Hostname
         self.assertEqual(

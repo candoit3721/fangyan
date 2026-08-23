@@ -20,7 +20,7 @@
     activeProvider: localStorage.getItem('asr_active_provider') || 'openrouter',
     openrouterApiKey: localStorage.getItem('asr_openrouter_api_key') || (localStorage.getItem('asr_api_key') && localStorage.getItem('asr_api_key').startsWith('sk-or-') ? localStorage.getItem('asr_api_key') : ''),
     dashscopeApiKey: localStorage.getItem('asr_dashscope_api_key') || localStorage.getItem('dashscope_api_key') || (localStorage.getItem('asr_api_key') && !localStorage.getItem('asr_api_key').startsWith('sk-or-') ? localStorage.getItem('asr_api_key') : ''),
-    dashscopeBaseUrl: localStorage.getItem('asr_dashscope_base_url') || localStorage.getItem('asr_base_url') || '',
+    dashscopeBaseUrl: localStorage.getItem('asr_dashscope_base_url') || localStorage.getItem('asr_base_url') || 'https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1',
 
     openrouterModel: localStorage.getItem('asr_openrouter_model') || 'google/gemini-3.7-flash',
     dashscopeModel: localStorage.getItem('asr_dashscope_model') || 'qwen-audio-3.0-asr-flash-filetrans',

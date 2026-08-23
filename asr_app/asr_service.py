@@ -129,6 +129,9 @@ def format_timestamp(ms: int, format_type: str = "srt") -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
+DEFAULT_DASHSCOPE_BASE_URL = "https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1"
+
+
 class ASRService:
     def __init__(
         self,
@@ -142,12 +145,17 @@ class ASRService:
             default_dashscope_base_url
             or os.environ.get("DASHSCOPE_BASE_URL", "")
             or os.environ.get("DASHSCOPE_HTTP_BASE_URL", "")
+            or DEFAULT_DASHSCOPE_BASE_URL
         ).strip()
 
     def normalize_dashscope_url(self, url: Optional[str]) -> str:
         """Normalize DashScope / Model Studio base URL for REST & Transcription API."""
         if not url or not url.strip():
-            return "https://dashscope.aliyuncs.com/api/v1"
+            return (
+                os.environ.get("DASHSCOPE_BASE_URL", "").strip()
+                or self.default_dashscope_base_url
+                or DEFAULT_DASHSCOPE_BASE_URL
+            )
         raw = url.strip()
         if not raw.startswith("http://") and not raw.startswith("https://"):
             raw = f"https://{raw}"
