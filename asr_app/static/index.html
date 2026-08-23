@@ -500,8 +500,20 @@
     <div id="historyDrawer" class="drawer-overlay hidden">
       <div class="drawer-panel">
         <div class="drawer-header">
-          <h3>🕒 转写历史记录</h3>
-          <button id="closeHistoryBtn" class="btn-icon btn-ghost">✕</button>
+          <div class="drawer-title-group">
+            <h3>🕒 转写历史</h3>
+            <span id="historyCountBadge" class="history-count-badge hidden">0 条记录</span>
+          </div>
+          <div class="drawer-header-actions">
+            <button id="clearAllHistoryBtn" class="btn btn-xs btn-outline-danger hidden" title="清空全部历史记录">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              清空
+            </button>
+            <button id="closeHistoryBtn" class="btn-icon btn-ghost" title="关闭">✕</button>
+          </div>
         </div>
         <div class="drawer-body">
           <div id="historyList" class="history-list">

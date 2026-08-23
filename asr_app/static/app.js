@@ -174,6 +174,8 @@
     // History Drawer
     historyDrawer: document.getElementById('historyDrawer'),
     closeHistoryBtn: document.getElementById('closeHistoryBtn'),
+    clearAllHistoryBtn: document.getElementById('clearAllHistoryBtn'),
+    historyCountBadge: document.getElementById('historyCountBadge'),
     historyList: document.getElementById('historyList'),
 
     // Toast
@@ -455,6 +457,9 @@
     // History Drawer
     el.toggleHistoryBtn.addEventListener('click', openHistoryDrawer);
     el.closeHistoryBtn.addEventListener('click', closeHistoryDrawer);
+    if (el.clearAllHistoryBtn) {
+      el.clearAllHistoryBtn.addEventListener('click', clearAllHistory);
+    }
     el.historyDrawer.addEventListener('click', (e) => {
       if (e.target === el.historyDrawer) closeHistoryDrawer();
     });
@@ -1353,6 +1358,15 @@
       const data = await resp.json();
       const items = data.history || [];
 
+      if (el.historyCountBadge) {
+        el.historyCountBadge.textContent = `${items.length} 条记录`;
+        el.historyCountBadge.classList.remove('hidden');
+      }
+
+      if (el.clearAllHistoryBtn) {
+        el.clearAllHistoryBtn.classList.toggle('hidden', items.length === 0);
+      }
+
       if (items.length === 0) {
         el.historyList.innerHTML = '<div class="text-muted text-sm p-4 text-center">暂无转写历史</div>';
         return;
@@ -1362,12 +1376,21 @@
       items.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'history-card';
+        card.dataset.sessionId = item.session_id;
         const dateStr = item.created_at ? new Date(item.created_at * 1000).toLocaleString() : '';
 
         card.innerHTML = `
           <div class="history-card-header">
-            <span class="history-card-title">${escapeHtml(item.filename || 'Audio Recording')}</span>
-            <span class="badge ${item.status === 'SUCCEEDED' ? 'badge-sm' : 'badge-gradient'}">${item.status || ''}</span>
+            <span class="history-card-title" title="${escapeHtml(item.filename || 'Audio Recording')}">${escapeHtml(item.filename || 'Audio Recording')}</span>
+            <div class="history-card-actions">
+              <span class="badge ${item.status === 'SUCCEEDED' ? 'badge-sm' : 'badge-gradient'}">${item.status || ''}</span>
+              <button class="btn-delete-history" title="删除此记录" aria-label="删除此记录">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="history-card-meta">
             <span>🕒 ${dateStr}</span>
@@ -1376,10 +1399,21 @@
           <div class="history-preview-text">${escapeHtml(item.preview_text || '点击加载完整转写...')}</div>
         `;
 
-        card.addEventListener('click', () => {
+        // Card click to load
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-delete-history')) return;
           loadHistoryItem(item.session_id);
           closeHistoryDrawer();
         });
+
+        // Delete button click
+        const deleteBtn = card.querySelector('.btn-delete-history');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteHistoryItem(item.session_id, item.filename || '录音记录', card);
+          });
+        }
 
         el.historyList.appendChild(card);
       });
@@ -1390,6 +1424,65 @@
 
   function closeHistoryDrawer() {
     el.historyDrawer.classList.add('hidden');
+  }
+
+  async function deleteHistoryItem(sessionId, filename, cardElement) {
+    if (!sessionId) return;
+    try {
+      if (cardElement) {
+        cardElement.classList.add('history-card-deleting');
+      }
+
+      const resp = await apiFetch(`/api/history/${sessionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!resp.ok) {
+        if (cardElement) cardElement.classList.remove('history-card-deleting');
+        throw new Error('删除请求失败');
+      }
+
+      setTimeout(() => {
+        if (cardElement && cardElement.parentNode) {
+          cardElement.remove();
+        }
+        loadHistoryList();
+      }, 200);
+
+      showToast(`已删除历史记录: ${filename}`);
+
+      // If active session was deleted, clear active session ID
+      if (state.currentSessionId === sessionId) {
+        state.currentSessionId = null;
+      }
+    } catch (err) {
+      showError(`删除历史记录失败: ${err.message}`);
+    }
+  }
+
+  async function clearAllHistory() {
+    if (!confirm('确定要清空全部转写历史记录吗？此操作将不可恢复。')) {
+      return;
+    }
+
+    try {
+      const resp = await apiFetch('/api/history/clear', {
+        method: 'DELETE',
+      });
+
+      if (!resp.ok) {
+        throw new Error('清空请求失败');
+      }
+
+      const data = await resp.json();
+      loadHistoryList();
+      showToast(data.message || '已清空所有历史记录');
+
+      // Clear current session pointer
+      state.currentSessionId = null;
+    } catch (err) {
+      showError(`清空历史记录失败: ${err.message}`);
+    }
   }
 
   async function loadHistoryItem(sessionId) {

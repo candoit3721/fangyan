@@ -1203,6 +1203,53 @@ body {
   overflow-y: auto;
 }
 
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.history-count-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-xs {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-outline-danger {
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+}
+
+.btn-outline-danger:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #be123c;
+  box-shadow: 0 1px 2px rgba(225, 29, 72, 0.1);
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
@@ -1210,12 +1257,13 @@ body {
 }
 
 .history-card {
+  position: relative;
   padding: 1rem;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -1228,10 +1276,25 @@ body {
   transform: translateY(-1px);
 }
 
+.history-card-deleting {
+  opacity: 0;
+  transform: translateX(30px) scale(0.95);
+  pointer-events: none;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-color: transparent;
+  overflow: hidden;
+  transition: all 0.25s ease-out;
+}
+
 .history-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .history-card-title {
@@ -1241,7 +1304,40 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 260px;
+  max-width: 220px;
+}
+
+.history-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.btn-delete-history {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  opacity: 0.6;
+}
+
+.history-card:hover .btn-delete-history {
+  opacity: 0.85;
+}
+
+.btn-delete-history:hover {
+  opacity: 1 !important;
+  color: #e11d48;
+  background: #ffe4e6;
+  transform: scale(1.1);
 }
 
 .history-card-meta {
@@ -1255,6 +1351,10 @@ body {
   font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ==========================================================================

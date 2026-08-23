@@ -98,6 +98,20 @@ class HistoryManager:
                 return True
             return False
 
+    def clear_all(self) -> int:
+        with self._lock:
+            count = len(self._items)
+            for item in self._items.values():
+                audio_file = item.get("audio_path")
+                if audio_file and os.path.exists(audio_file):
+                    try:
+                        os.remove(audio_file)
+                    except Exception:
+                        pass
+            self._items = {}
+            self._save()
+            return count
+
 
 history_manager = HistoryManager(HISTORY_FILE)
 
@@ -472,7 +486,14 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                 "auth_required": True,
             }, 401)
 
-        if path.startswith("/api/history/"):
+        if path in ("/api/history", "/api/history/clear"):
+            count = history_manager.clear_all()
+            return self._send_json({
+                "success": True,
+                "deleted_count": count,
+                "message": f"Successfully cleared {count} history records",
+            })
+        elif path.startswith("/api/history/"):
             session_id = path[len("/api/history/"):]
             if history_manager.delete(session_id):
                 return self._send_json({"success": True, "message": "Session deleted"})

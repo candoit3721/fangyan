@@ -301,6 +301,24 @@ class TestServerEndpoints(unittest.TestCase):
         # Verify deletion
         self.assertIsNone(history_manager.get(test_session_id))
 
+        # Test DELETE /api/history/clear
+        history_manager.clear_all()
+        history_manager.add("item_1", {"session_id": "item_1", "text": "test 1"})
+        history_manager.add("item_2", {"session_id": "item_2", "text": "test 2"})
+        self.assertEqual(len(history_manager.list_all()), 2)
+
+        clear_req = urllib.request.Request(
+            f"{self.base_url}/api/history/clear",
+            method="DELETE",
+        )
+        with urllib.request.urlopen(clear_req) as resp:
+            self.assertEqual(resp.status, 200)
+            clear_data = json.loads(resp.read().decode("utf-8"))
+            self.assertTrue(clear_data["success"])
+            self.assertEqual(clear_data["deleted_count"], 2)
+
+        self.assertEqual(len(history_manager.list_all()), 0)
+
     def test_passcode_authentication(self):
         # Set APP_PASSCODE
         secret_passcode = "supersecret123"
