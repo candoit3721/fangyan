@@ -321,7 +321,7 @@ class ASRService:
                     "notice": km["deprecation_notice"],
                 })
 
-        # Try dynamically querying DashScope workspace endpoint if key/url is provided
+        # Try dynamically querying DashScope workspace endpoint for additional filetrans models
         effective_ds_key = (dashscope_key or self.default_dashscope_key or "").strip()
         effective_ds_base = self.normalize_dashscope_url(dashscope_base_url or self.default_dashscope_base_url)
         if effective_ds_key and len(effective_ds_key) > 8:
@@ -335,18 +335,21 @@ class ASRService:
                     for wm in workspace_models:
                         w_id = wm.get("id", "")
                         w_id_lower = w_id.lower()
-                        is_tts = any(k in w_id_lower for k in ["tts", "vc", "vd", "cosyvoice", "sambert"])
-                        is_asr = any(k in w_id_lower for k in ["audio", "asr", "sensevoice", "paraformer", "omni", "livetranslate"])
-                        if is_asr and not is_tts and w_id not in existing_ds_ids:
+                        # Strictly check: Must be an offline filetrans model (exclude all realtime, omni, tts, livetranslate models)
+                        is_non_filetrans = any(k in w_id_lower for k in [
+                            "realtime", "omni", "livetranslate", "tts", "vc", "vd", "cosyvoice", "sambert", "s2s", "stream"
+                        ])
+                        is_filetrans_asr = "filetrans" in w_id_lower or w_id_lower in ["sensevoice-v1", "paraformer-v2", "paraformer-8k-v2"]
+                        if is_filetrans_asr and not is_non_filetrans and w_id not in existing_ds_ids:
                             dashscope_models.append({
                                 "id": w_id,
-                                "name": f"{w_id} [DashScope 实时/多模态]",
+                                "name": f"{w_id} [DashScope 录音转写]",
                                 "provider": "dashscope",
                                 "category": "阿里云百炼 / 专属工作区模型",
                                 "url": "https://help.aliyun.com/zh/model-studio/asr-model/",
-                                "description": "阿里云百炼工作区在线可用音频/语音识别模型。",
+                                "description": "阿里云百炼工作区在线可用离线录音转写模型。",
                                 "recommended": False,
-                                "is_filetrans": False,
+                                "is_filetrans": True,
                                 "is_deprecated": False,
                                 "deprecation_notice": "",
                             })

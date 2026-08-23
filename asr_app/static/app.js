@@ -1655,11 +1655,13 @@
           const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
           html += `<option value="${m.id}" ${isSelected}>⚡ ${m.name}</option>`;
         });
-        html += '</optgroup><optgroup label="🎙️ 百炼可用语音 / 全双工模型">';
-        regular.forEach((m) => {
-          const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
-          html += `<option value="${m.id}" ${isSelected}>${m.name}</option>`;
-        });
+        if (regular.length > 0) {
+          html += '</optgroup><optgroup label="🎙️ 百炼离线录音转写模型 (ASR)">';
+          regular.forEach((m) => {
+            const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+            html += `<option value="${m.id}" ${isSelected}>${m.name}</option>`;
+          });
+        }
         if (deprecated.length > 0) {
           html += '</optgroup><optgroup label="⚠️ 历史已下线模型 (含下线通知)">';
           deprecated.forEach((m) => {
