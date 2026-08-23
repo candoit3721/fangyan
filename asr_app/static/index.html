@@ -576,7 +576,13 @@
                 <span>热词与领域上下文 (Prompt / Context)</span>
                 <span class="text-muted text-xs">提升专有名词准确率</span>
               </label>
-              <textarea id="settingPrompt" class="form-textarea" rows="2" placeholder="输入行业术语、人名、产品名或背景信息，例如: 阿里巴巴, Qwen-Audio, 通义千问, 模型工作室, ASR"></textarea>
+              <textarea id="settingPrompt" class="form-textarea" rows="2" placeholder="例如: 法律 继承 房产 遗产 公证 遗嘱 产权">法律 继承 房产 遗产</textarea>
+              <div class="endpoint-presets-bar mt-1">
+                <span class="text-xs text-muted">快捷填入:</span>
+                <button type="button" class="preset-tag prompt-preset-tag" data-prompt="法律 继承 房产 遗产 公证 遗嘱 产权">⚖️ 房产与继承法律</button>
+                <button type="button" class="preset-tag prompt-preset-tag" data-prompt="上海话 吴语 沪语 弄堂 动迁 户口">🏙️ 吴语/上海方言</button>
+                <button type="button" class="preset-tag prompt-preset-tag" data-prompt="医疗 诊断 病历 处方 检查 症状">🏥 医疗与问诊</button>
+              </div>
             </div>
           </div>
         </div>

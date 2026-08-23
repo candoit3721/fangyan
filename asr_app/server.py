@@ -575,9 +575,9 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         diarization_enabled = str(fields.get("diarization_enabled", "true")).lower() in ["true", "1", "yes"]
         speaker_count = fields.get("speaker_count")
         speaker_count = int(speaker_count) if speaker_count and str(speaker_count).isdigit() else None
-        disfluency_removal = str(fields.get("disfluency_removal_enabled", "false")).lower() in ["true", "1", "yes"]
-        timestamp_alignment = str(fields.get("timestamp_alignment_enabled", "false")).lower() in ["true", "1", "yes"]
-        prompt = fields.get("prompt")
+        disfluency_removal = str(fields.get("disfluency_removal_enabled", "true")).lower() in ["true", "1", "yes"]
+        timestamp_alignment = str(fields.get("timestamp_alignment_enabled", "true")).lower() in ["true", "1", "yes"]
+        prompt = fields.get("prompt") if fields.get("prompt") is not None else "法律 继承 房产 遗产"
         raw_base = fields.get("base_url") or self.headers.get("X-DashScope-Base-Url")
         base_url = raw_base.strip() if raw_base and raw_base.strip() else None
 

@@ -541,6 +541,9 @@ class ASRService:
         if language_hints is None:
             language_hints = ["zh", "wuu"]
 
+        if prompt is None:
+            prompt = "法律 继承 房产 遗产"
+
         provider = self.detect_provider(model, api_key)
         key = self.get_api_key(api_key, provider=provider)
 

@@ -35,7 +35,7 @@
     speakerCount: localStorage.getItem('asr_speaker_count') || '',
     disfluency: localStorage.getItem('asr_disfluency') !== 'false',
     alignTimestamps: localStorage.getItem('asr_align_timestamps') !== 'false',
-    prompt: localStorage.getItem('asr_prompt') || '',
+    prompt: localStorage.getItem('asr_prompt') !== null ? localStorage.getItem('asr_prompt') : '法律 继承 房产 遗产',
 
     // Active media
     activeMode: 'record', // 'record' | 'upload'
@@ -718,12 +718,16 @@
     if (el.saveSettingsBtn) el.saveSettingsBtn.addEventListener('click', saveSettings);
     if (el.resetSettingsBtn) el.resetSettingsBtn.addEventListener('click', resetSettings);
 
-    // Endpoint preset tags
+    // Endpoint & Prompt preset tags
     document.querySelectorAll('.preset-tag').forEach((btn) => {
       btn.addEventListener('click', () => {
         if (el.settingDashScopeBaseUrl && btn.dataset.url) {
           el.settingDashScopeBaseUrl.value = btn.dataset.url;
           el.settingDashScopeBaseUrl.focus();
+        }
+        if (el.settingPrompt && btn.dataset.prompt) {
+          el.settingPrompt.value = btn.dataset.prompt;
+          el.settingPrompt.focus();
         }
       });
     });
@@ -1894,15 +1898,15 @@
 
     if (el.langChipsContainer) {
       el.langChipsContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-        cb.checked = cb.value === 'zh';
+        cb.checked = cb.value === 'zh' || cb.value === 'wuu';
       });
     }
-    if (el.settingDiarization) el.settingDiarization.checked = false;
-    if (el.speakerCountGroup) el.speakerCountGroup.classList.add('hidden');
+    if (el.settingDiarization) el.settingDiarization.checked = true;
+    if (el.speakerCountGroup) el.speakerCountGroup.classList.remove('hidden');
     if (el.settingSpeakerCount) el.settingSpeakerCount.value = '';
     if (el.settingDisfluency) el.settingDisfluency.checked = true;
     if (el.settingAlignTimestamps) el.settingAlignTimestamps.checked = true;
-    if (el.settingPrompt) el.settingPrompt.value = '';
+    if (el.settingPrompt) el.settingPrompt.value = '法律 继承 房产 遗产';
   }
 
   // ==========================================================================
