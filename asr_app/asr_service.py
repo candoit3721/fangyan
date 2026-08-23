@@ -18,156 +18,24 @@ from dashscope.audio.asr import Transcription
 
 logger = logging.getLogger(__name__)
 
-# Available preconfigured models
+# Available preconfigured models strictly filtered for Audio / ASR transcription
 AVAILABLE_MODELS = [
-    # --- OpenRouter ASR & Multimodal Qwen Models ---
-    {
-        "id": "qwen/qwen3-asr-flash-2026-02-10",
-        "name": "Qwen3 ASR Flash (2026-02-10) [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter ASR (极速语音识别)",
-        "url": "https://openrouter.ai/qwen/qwen3-asr-flash-2026-02-10",
-        "description": "OpenRouter 专属 Qwen3-Omni ASR 语音模型，极速响应，支持11+语言、22+中文方言（含上海话/粤语/四川话）、背景音及戏曲/歌声转写。",
-        "recommended": True,
-        "is_filetrans": True,
-    },
-    {
-        "id": "qwen/qwen3.7-flash",
-        "name": "Qwen 3.7 Flash [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.7 / 3.8",
-        "url": "https://openrouter.ai/qwen/qwen3.7-flash",
-        "description": "阿里最新 Qwen 3.7 高速大模型，支持语音与复杂文本结构化转写。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.7-plus",
-        "name": "Qwen 3.7 Plus [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.7 / 3.8",
-        "url": "https://openrouter.ai/qwen/qwen3.7-plus",
-        "description": "Qwen 3.7 旗舰增强模型，拥有极高理解力与长音频转写归纳能力。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.7-max",
-        "name": "Qwen 3.7 Max [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.7 / 3.8",
-        "url": "https://openrouter.ai/qwen/qwen3.7-max",
-        "description": "Qwen 3.7 最强综合推理能力模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.8-27b",
-        "name": "Qwen 3.8 27B [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.7 / 3.8",
-        "url": "https://openrouter.ai/qwen/qwen3.8-27b",
-        "description": "全新 Qwen 3.8 27B 稠密视觉/多模态模型，支持灵活推理与高精多语言转写。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.8-max",
-        "name": "Qwen 3.8 Max [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.7 / 3.8",
-        "url": "https://openrouter.ai/qwen/qwen3.8-max",
-        "description": "Qwen 3.8 系列顶级超大规模模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.5-flash-02-23",
-        "name": "Qwen 3.5 Flash (02-23) [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.5 系列",
-        "url": "https://openrouter.ai/qwen/qwen3.5-flash-02-23",
-        "description": "Qwen 3.5 高性价比闪电响应模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.5-plus-02-15",
-        "name": "Qwen 3.5 Plus (02-15) [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.5 系列",
-        "url": "https://openrouter.ai/qwen/qwen3.5-plus-02-15",
-        "description": "Qwen 3.5 增强版模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3.5-27b",
-        "name": "Qwen 3.5 27B [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter Qwen 3.5 系列",
-        "url": "https://openrouter.ai/qwen/qwen3.5-27b",
-        "description": "Qwen 3.5 27B 参数高性能通用模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3-vl-32b-instruct",
-        "name": "Qwen 3 VL 32B Instruct [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter 多模态系列",
-        "url": "https://openrouter.ai/qwen/qwen3-vl-32b-instruct",
-        "description": "32B 多模态视觉与音频解析大模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-    {
-        "id": "qwen/qwen3-vl-8b-instruct",
-        "name": "Qwen 3 VL 8B Instruct [OpenRouter]",
-        "provider": "openrouter",
-        "category": "OpenRouter 多模态系列",
-        "url": "https://openrouter.ai/qwen/qwen3-vl-8b-instruct",
-        "description": "轻量级 8B 多模态解析模型。",
-        "recommended": False,
-        "is_filetrans": False,
-    },
-
-    # --- DashScope / Model Studio ASR Models ---
+    # --- Alibaba Cloud DashScope Verified ASR Models ---
     {
         "id": "qwen-audio-3.0-asr-flash-filetrans",
-        "name": "Qwen-Audio 3.0 Flash [DashScope / 阿里云百炼]",
+        "name": "Qwen-Audio 3.0 Flash 录音转写 [DashScope 官方推荐]",
         "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
+        "category": "阿里云百炼 / 离线长音频转写",
         "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
-        "description": "阿里云百炼官方 3.0 Flash 离线长音频转写模型，单文件支持至 12 小时 / 2GB。",
-        "recommended": False,
-        "is_filetrans": True,
-    },
-    {
-        "id": "qwen3-asr-flash-filetrans",
-        "name": "Qwen3 ASR Flash [DashScope]",
-        "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
-        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
-        "description": "DashScope 高精度录音文件转写模型。",
-        "recommended": False,
-        "is_filetrans": True,
-    },
-    {
-        "id": "qwen-audio-asr",
-        "name": "Qwen Audio ASR (通用) [DashScope]",
-        "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
-        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
-        "description": "通义千问通用音频多模态语音识别模型。",
-        "recommended": False,
+        "description": "阿里云百炼官方 3.0 Flash 录音文件转写模型，支持说话人分离、逐词时间戳、方言识别，支持至 12 小时。",
+        "recommended": True,
         "is_filetrans": True,
     },
     {
         "id": "sensevoice-v1",
         "name": "SenseVoice-v1 [DashScope]",
         "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
+        "category": "阿里云百炼 / 多语种与富文本识别",
         "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
         "description": "极速多语种与富文本语音识别，支持情感与声音事件检测。",
         "recommended": False,
@@ -177,7 +45,7 @@ AVAILABLE_MODELS = [
         "id": "paraformer-v2",
         "name": "Paraformer-v2 [DashScope]",
         "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
+        "category": "阿里云百炼 / 通用语音识别",
         "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
         "description": "通义实验室自研高精度非流式语音识别模型。",
         "recommended": False,
@@ -187,11 +55,53 @@ AVAILABLE_MODELS = [
         "id": "paraformer-8k-v2",
         "name": "Paraformer 8k v2 (电话客服) [DashScope]",
         "provider": "dashscope",
-        "category": "阿里云百炼 / DashScope",
+        "category": "阿里云百炼 / 电话客服",
         "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
         "description": "专为 8kHz 电话录音与客服质检优化的识别模型。",
         "recommended": False,
         "is_filetrans": True,
+    },
+
+    # --- OpenRouter Verified Audio-Capable Multimodal Models ---
+    {
+        "id": "google/gemini-3.7-flash",
+        "name": "Gemini 3.7 Flash [OpenRouter 推荐]",
+        "provider": "openrouter",
+        "category": "OpenRouter 语音多模态",
+        "url": "https://openrouter.ai/google/gemini-3.7-flash",
+        "description": "Google 顶级极速多模态模型，原生支持长音频直接输入与高精度语音转写。",
+        "recommended": True,
+        "is_filetrans": False,
+    },
+    {
+        "id": "google/gemini-3.5-flash",
+        "name": "Gemini 3.5 Flash [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter 语音多模态",
+        "url": "https://openrouter.ai/google/gemini-3.5-flash",
+        "description": "高性价比原生音频转写大模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "mistralai/voxtral-small-24b-2507",
+        "name": "Voxtral Small 24B [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter 语音多模态",
+        "url": "https://openrouter.ai/mistralai/voxtral-small-24b-2507",
+        "description": "Mistral 原生 24B 语音理解与音频转写模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "openai/gpt-audio-mini",
+        "name": "GPT Audio Mini [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter 语音多模态",
+        "url": "https://openrouter.ai/openai/gpt-audio-mini",
+        "description": "OpenAI 官方原生音频多模态识别轻量模型。",
+        "recommended": False,
+        "is_filetrans": False,
     },
 ]
 
@@ -281,17 +191,11 @@ class ASRService:
                     desc = m.get("description", "")
                     desc_lower = desc.lower()
                     modality = m.get("architecture", {}).get("modality", "")
+                    inputs = modality.split("->")[0] if "->" in modality else modality
 
-                    is_voice = (
-                        "audio" in modality
-                        or "speech" in modality
-                        or "qwen" in mid_lower
-                        or "whisper" in mid_lower
-                        or "audio" in mid_lower
-                        or "asr" in mid_lower
-                        or "voice" in mid_lower
-                    )
-                    if not is_voice:
+                    # STRICT AUDIO INPUT FILTER: Must explicitly support audio input
+                    is_audio_input = "audio" in inputs.lower()
+                    if not is_audio_input:
                         continue
 
                     exp_date = m.get("expiration_date")
@@ -309,15 +213,15 @@ class ASRService:
 
                     model_entry = {
                         "id": mid,
-                        "name": f"{mname} [OpenRouter]",
+                        "name": f"{mname} [OpenRouter 原生音频]",
                         "provider": "openrouter",
-                        "category": "OpenRouter 语音与多模态",
+                        "category": "OpenRouter 语音多模态",
                         "modality": modality,
                         "context_length": m.get("context_length"),
                         "pricing": m.get("pricing"),
                         "description": desc[:180] + ("..." if len(desc) > 180 else ""),
                         "url": f"https://openrouter.ai/{mid}",
-                        "recommended": mid == "qwen/qwen3-asr-flash-2026-02-10",
+                        "recommended": "gemini-3.7-flash" in mid or "gemini-3.5-flash" in mid,
                         "is_deprecated": is_dep,
                         "deprecation_notice": dep_notice,
                     }

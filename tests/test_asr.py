@@ -235,19 +235,18 @@ class TestServerEndpoints(unittest.TestCase):
             self.assertEqual(resp.status, 200)
             data = json.loads(resp.read().decode("utf-8"))
             self.assertIn("models", data)
-            self.assertEqual(data["default_model"], "qwen/qwen3-asr-flash-2026-02-10")
-            # Verify expanded OpenRouter model presence
+            self.assertEqual(data["default_model"], "qwen-audio-3.0-asr-flash-filetrans")
             model_ids = [m["id"] for m in data["models"]]
-            self.assertIn("qwen/qwen3-asr-flash-2026-02-10", model_ids)
-            self.assertIn("qwen/qwen3.7-flash", model_ids)
-            self.assertIn("qwen/qwen3.8-27b", model_ids)
+            self.assertIn("qwen-audio-3.0-asr-flash-filetrans", model_ids)
+            self.assertIn("sensevoice-v1", model_ids)
+            self.assertIn("google/gemini-3.7-flash", model_ids)
 
     def test_refresh_models_endpoint(self):
         with urllib.request.urlopen(f"{self.base_url}/api/models/refresh") as resp:
             self.assertEqual(resp.status, 200)
             data = json.loads(resp.read().decode("utf-8"))
             self.assertIn("models", data)
-            self.assertGreaterEqual(len(data["models"]), 10)
+            self.assertGreaterEqual(len(data["models"]), 4)
 
     def test_get_history(self):
         with urllib.request.urlopen(f"{self.base_url}/api/history") as resp:

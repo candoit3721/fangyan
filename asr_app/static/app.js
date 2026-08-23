@@ -22,13 +22,13 @@
     dashscopeApiKey: localStorage.getItem('asr_dashscope_api_key') || localStorage.getItem('dashscope_api_key') || (localStorage.getItem('asr_api_key') && !localStorage.getItem('asr_api_key').startsWith('sk-or-') ? localStorage.getItem('asr_api_key') : ''),
     dashscopeBaseUrl: localStorage.getItem('asr_dashscope_base_url') || localStorage.getItem('asr_base_url') || '',
 
-    openrouterModel: localStorage.getItem('asr_openrouter_model') || 'qwen/qwen3-asr-flash-2026-02-10',
+    openrouterModel: localStorage.getItem('asr_openrouter_model') || 'google/gemini-3.7-flash',
     dashscopeModel: localStorage.getItem('asr_dashscope_model') || 'qwen-audio-3.0-asr-flash-filetrans',
 
     // Unified active parameters for requests
     apiKey: '',
     baseUrl: '',
-    model: 'qwen/qwen3-asr-flash-2026-02-10',
+    model: 'qwen-audio-3.0-asr-flash-filetrans',
 
     languageHints: JSON.parse(localStorage.getItem('asr_lang_hints') || localStorage.getItem('dashscope_lang_hints') || '["zh"]'),
     diarization: localStorage.getItem('asr_diarization') === 'true',
@@ -1393,17 +1393,10 @@
     }
     if (el.settingOpenRouterModel) {
       const orKnown = [
-        'qwen/qwen3-asr-flash-2026-02-10',
-        'qwen/qwen3.7-flash',
-        'qwen/qwen3.7-plus',
-        'qwen/qwen3.7-max',
-        'qwen/qwen3.8-27b',
-        'qwen/qwen3.8-max',
-        'qwen/qwen3.5-flash-02-23',
-        'qwen/qwen3.5-plus-02-15',
-        'qwen/qwen3.5-27b',
-        'qwen/qwen3-vl-32b-instruct',
-        'qwen/qwen3-vl-8b-instruct',
+        'google/gemini-3.7-flash',
+        'google/gemini-3.5-flash',
+        'mistralai/voxtral-small-24b-2507',
+        'openai/gpt-audio-mini',
       ];
       if (orKnown.includes(state.openrouterModel)) {
         el.settingOpenRouterModel.value = state.openrouterModel;

@@ -230,7 +230,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
 
             return self._send_json({
                 "models": AVAILABLE_MODELS,
-                "default_model": "qwen/qwen3-asr-flash-2026-02-10",
+                "default_model": "qwen-audio-3.0-asr-flash-filetrans",
                 "has_env_api_key": has_openrouter_key or has_dashscope_key,
                 "has_openrouter_key": has_openrouter_key,
                 "has_dashscope_key": has_dashscope_key,
