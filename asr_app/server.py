@@ -276,14 +276,24 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         elif path.startswith("/api/task/"):
             task_id = path[len("/api/task/"):]
             session_id = query.get("session_id", [None])[0]
-            api_key = self.headers.get("X-DashScope-Api-Key") or query.get("api_key", [None])[0]
+            session = history_manager.get(session_id) if session_id else None
+
+            api_key = (
+                self.headers.get("X-DashScope-Api-Key")
+                or query.get("api_key", [None])[0]
+                or (session.get("api_key") if session else None)
+            )
+            base_url = (
+                self.headers.get("X-DashScope-Base-Url")
+                or query.get("base_url", [None])[0]
+                or (session.get("base_url") if session else None)
+            )
 
             try:
-                task_data = asr_service.fetch_task_status(task_id, api_key=api_key)
+                task_data = asr_service.fetch_task_status(task_id, api_key=api_key, base_url=base_url)
                 
                 # If finished and session_id given, update history
                 if task_data.get("status") == "SUCCEEDED" and session_id:
-                    session = history_manager.get(session_id)
                     if session:
                         session.update({
                             "status": "SUCCEEDED",
@@ -295,18 +305,17 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                             "details": task_data.get("details", {}),
                         })
                         history_manager.add(session_id, session)
-                elif task_data.get("status") == "FAILED" and session_id:
-                    session = history_manager.get(session_id)
+                elif task_data.get("status") in ["FAILED", "CANCELED"] and session_id:
                     if session:
                         session.update({
-                            "status": "FAILED",
-                            "error_message": task_data.get("error_message", "Transcription failed"),
+                            "status": task_data.get("status"),
+                            "error_message": task_data.get("error_message") or task_data.get("message") or "Transcription failed",
                         })
                         history_manager.add(session_id, session)
 
                 return self._send_json(task_data)
             except Exception as e:
-                logger.error(f"Error checking task {task_id}: {e}")
+                logger.error(f"Error checking task {task_id}: {e}", exc_info=True)
                 return self._send_error(str(e), 500)
 
         # 5. Audio streaming endpoint with Range header support
@@ -597,6 +606,8 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
             "audio_url": audio_url,
             "model": model,
             "provider": provider,
+            "base_url": base_url,
+            "api_key": api_key,
             "created_at": time.time(),
             "status": task_status,
             "full_text": direct_result.get("full_text", "") if direct_result else "",

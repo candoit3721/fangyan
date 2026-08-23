@@ -938,9 +938,17 @@
     showProgressCard(state.model);
 
     try {
+      const submitHeaders = {};
+      if (state.apiKey && state.apiKey !== 'configured_in_env') {
+        submitHeaders['X-DashScope-Api-Key'] = state.apiKey;
+      }
+      if (state.baseUrl) {
+        submitHeaders['X-DashScope-Base-Url'] = state.baseUrl;
+      }
+
       const resp = await apiFetch('/api/transcribe', {
         method: 'POST',
-        headers: state.apiKey && state.apiKey !== 'configured_in_env' ? { 'X-DashScope-Api-Key': state.apiKey } : {},
+        headers: submitHeaders,
         body: formData,
       });
 
@@ -1001,8 +1009,20 @@
     state.pollInterval = setInterval(async () => {
       updateProgressTimer();
       try {
-        const url = `/api/task/${taskId}?session_id=${sessionId || ''}`;
-        const headers = state.apiKey && state.apiKey !== 'configured_in_env' ? { 'X-DashScope-Api-Key': state.apiKey } : {};
+        const params = new URLSearchParams();
+        if (sessionId) params.set('session_id', sessionId);
+        if (state.apiKey && state.apiKey !== 'configured_in_env') params.set('api_key', state.apiKey);
+        if (state.baseUrl) params.set('base_url', state.baseUrl);
+
+        const url = `/api/task/${taskId}?${params.toString()}`;
+        const headers = {};
+        if (state.apiKey && state.apiKey !== 'configured_in_env') {
+          headers['X-DashScope-Api-Key'] = state.apiKey;
+        }
+        if (state.baseUrl) {
+          headers['X-DashScope-Base-Url'] = state.baseUrl;
+        }
+
         const resp = await apiFetch(url, { headers });
         const data = await resp.json();
 

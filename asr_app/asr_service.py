@@ -900,19 +900,31 @@ class ASRService:
         effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
         dashscope.base_http_api_url = effective_base_url
         dashscope.api_key = key
+        logger.info(f"Fetching DashScope task {task_id} status from endpoint: {effective_base_url}")
 
         try:
             response = Transcription.fetch(task=task_id, api_key=key)
         except Exception as e:
-            logger.error(f"Error fetching task {task_id}: {e}")
+            logger.error(f"Error fetching task {task_id}: {e}", exc_info=True)
             raise RuntimeError(f"Error checking task status: {str(e)}")
 
         if response.status_code != 200:
+            err_code = getattr(response, "code", "") or ""
+            err_text = getattr(response, "message", "") or ""
+            if "InvalidApiKey" in err_code or "Invalid API-key" in err_text:
+                err_msg = (
+                    f"阿里云百炼 API 认证失败: Invalid API-key provided. (请求端点: {effective_base_url})\n"
+                    "请确认 DashScope API Key 与设置中的 API Base URL 是否来自同一个百炼工作区/区域。"
+                )
+            else:
+                err_msg = f"DashScope 任务查询失败 (HTTP {response.status_code}): {err_code} - {err_text}"
+            logger.error(f"Task fetch failed for {task_id}: {err_msg}")
             return {
                 "task_id": task_id,
                 "status": "FAILED",
-                "code": response.code,
-                "message": response.message,
+                "code": err_code,
+                "message": err_msg,
+                "error_message": err_msg,
             }
 
         raw_output = response.output if isinstance(response.output, dict) else (response.output.__dict__ if hasattr(response.output, "__dict__") else {})
