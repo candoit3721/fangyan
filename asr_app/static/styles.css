@@ -1069,16 +1069,16 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 620px;
+  max-width: 680px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  max-height: 90vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
 }
 
 .modal-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.5rem 1rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: flex-start;
@@ -1102,6 +1102,122 @@ body {
 }
 
 .modal-close-btn:hover { color: var(--text-main); }
+
+/* Modal Tab Bar */
+.modal-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem 0;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.modal-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(241, 245, 249, 0.6);
+}
+
+.modal-tab-btn.active {
+  color: var(--primary-600);
+  border-bottom-color: var(--primary-600);
+  background: #ffffff;
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.tab-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  display: inline-block;
+}
+
+.settings-tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Provider Banner Card */
+.provider-banner-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.1rem;
+  gap: 1rem;
+}
+
+.provider-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.provider-badge-icon {
+  font-size: 1.4rem;
+}
+
+.provider-banner-info h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 0.15rem;
+}
+
+.provider-banner-info p {
+  font-size: 0.775rem;
+  color: #15803d;
+  margin: 0;
+}
+
+.provider-active-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #166534;
+  background: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid #86efac;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.provider-active-toggle:hover {
+  background: #f0fdf4;
+  border-color: #4ade80;
+}
+
+.provider-active-toggle input {
+  cursor: pointer;
+}
 
 .modal-body {
   padding: 1.5rem;

@@ -343,165 +343,243 @@
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-title-group">
-            <h2>⚙️ ASR 模型与识别参数配置</h2>
-            <p class="text-muted">基于阿里云百炼 / DashScope 官方接口规范</p>
+            <h2>⚙️ 系统与识别设置</h2>
+            <p class="text-muted">独立配置 OpenRouter、阿里云百炼及通用方言识别偏好</p>
           </div>
-          <button id="closeSettingsBtn" class="modal-close-btn">✕</button>
+          <button id="closeSettingsBtn" class="modal-close-btn" title="关闭">✕</button>
+        </div>
+
+        <!-- Tab Navigation Bar -->
+        <div class="modal-tabs-nav">
+          <button type="button" class="modal-tab-btn active" data-tab="openrouter" id="tabBtnOpenRouter">
+            <span class="tab-icon">🌟</span>
+            <span class="tab-title">OpenRouter</span>
+            <span class="tab-active-dot" id="dotOpenRouter"></span>
+          </button>
+          <button type="button" class="modal-tab-btn" data-tab="alibaba" id="tabBtnAlibaba">
+            <span class="tab-icon">☁️</span>
+            <span class="tab-title">阿里云百炼</span>
+            <span class="tab-active-dot hidden" id="dotAlibaba"></span>
+          </button>
+          <button type="button" class="modal-tab-btn" data-tab="preferences" id="tabBtnPreferences">
+            <span class="tab-icon">🎙️</span>
+            <span class="tab-title">方言与识别参数</span>
+          </button>
         </div>
 
         <div class="modal-body">
-          <!-- API Key Section -->
-          <div class="form-group">
-            <label class="form-label" for="settingApiKey">
-              <span id="apiKeyLabelText">API Key (OpenRouter 或 DashScope)</span>
-              <span id="apiKeyLinkContainer">
-                <a href="https://openrouter.ai/keys" target="_blank" class="text-link">获取 OpenRouter Key ↗</a>
-                <span class="text-muted"> | </span>
-                <a href="https://bailian.console.aliyun.com/?apiKey=1" target="_blank" class="text-link">获取 DashScope Key ↗</a>
-              </span>
-            </label>
-            <div class="input-with-action">
-              <input type="password" id="settingApiKey" class="form-input font-mono" placeholder="sk-or-v1-... (OpenRouter) 或 sk-... (DashScope)">
-              <button type="button" id="toggleKeyVisibilityBtn" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
-              <button type="button" id="testKeyBtn" class="btn btn-secondary btn-sm">测试连接</button>
+          <!-- ==================== Tab Pane 1: OpenRouter ==================== -->
+          <div id="paneOpenRouter" class="settings-tab-pane">
+            <div class="provider-banner-card">
+              <div class="provider-banner-info">
+                <div class="provider-badge-icon">🌟</div>
+                <div>
+                  <h4>OpenRouter 语音识别</h4>
+                  <p>推荐模型 <code>qwen/qwen3-asr-flash-2026-02-10</code>，支持极速转写</p>
+                </div>
+              </div>
+              <label class="provider-active-toggle" title="设为当前生效服务商">
+                <input type="radio" name="active_provider_choice" value="openrouter" id="radioProviderOpenRouter" checked>
+                <span>当前使用</span>
+              </label>
             </div>
-            <div id="keyValidationResult" class="form-hint">支持在浏览器本地保存，或配置系统环境变量 <code>OPENROUTER_API_KEY</code> / <code>DASHSCOPE_API_KEY</code></div>
+
+            <!-- OpenRouter API Key -->
+            <div class="form-group">
+              <label class="form-label" for="settingOpenRouterApiKey">
+                <span>OpenRouter API Key</span>
+                <a href="https://openrouter.ai/keys" target="_blank" class="text-link">获取 Key ↗</a>
+              </label>
+              <div class="input-with-action">
+                <input type="password" id="settingOpenRouterApiKey" class="form-input font-mono" placeholder="sk-or-v1-...">
+                <button type="button" id="toggleOpenRouterKeyVisibilityBtn" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
+                <button type="button" id="testOpenRouterKeyBtn" class="btn btn-secondary btn-sm">测试连接</button>
+              </div>
+              <div id="openRouterKeyValidationResult" class="form-hint">支持在浏览器本地保存，或配置系统环境变量 <code>OPENROUTER_API_KEY</code></div>
+            </div>
+
+            <!-- OpenRouter Model Select -->
+            <div class="form-group">
+              <label class="form-label" for="settingOpenRouterModel">
+                <span>识别模型 (OpenRouter Models)</span>
+                <span>
+                  <button type="button" id="refreshOpenRouterModelsBtn" class="btn btn-ghost btn-sm text-xs" title="从 OpenRouter 实时同步最新 Qwen 模型列表">🔄 刷新模型</button>
+                  <a href="https://openrouter.ai/qwen" target="_blank" class="text-link">Qwen 专区 ↗</a>
+                </span>
+              </label>
+              <select id="settingOpenRouterModel" class="form-select">
+                <optgroup label="🌟 推荐语音识别 (ASR 极速)">
+                  <option value="qwen/qwen3-asr-flash-2026-02-10" selected>⚡ qwen/qwen3-asr-flash-2026-02-10 (最新极速 ASR)</option>
+                </optgroup>
+                <optgroup label="🧠 Qwen 3.7 / 3.8 系列">
+                  <option value="qwen/qwen3.7-flash">qwen/qwen3.7-flash (Qwen 3.7 闪电高速)</option>
+                  <option value="qwen/qwen3.7-plus">qwen/qwen3.7-plus (Qwen 3.7 旗舰增强)</option>
+                  <option value="qwen/qwen3.7-max">qwen/qwen3.7-max (Qwen 3.7 顶级推理)</option>
+                  <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Qwen 3.8 27B 视觉/音频)</option>
+                  <option value="qwen/qwen3.8-max">qwen/qwen3.8-max (Qwen 3.8 Max)</option>
+                </optgroup>
+                <optgroup label="⚡ Qwen 3.5 系列">
+                  <option value="qwen/qwen3.5-flash-02-23">qwen/qwen3.5-flash-02-23 (高性价比)</option>
+                  <option value="qwen/qwen3.5-plus-02-15">qwen/qwen3.5-plus-02-15 (Qwen 3.5 Plus)</option>
+                  <option value="qwen/qwen3.5-27b">qwen/qwen3.5-27b (Qwen 3.5 27B)</option>
+                </optgroup>
+                <optgroup label="👁️ 多模态系列">
+                  <option value="qwen/qwen3-vl-32b-instruct">qwen/qwen3-vl-32b-instruct (32B 多模态)</option>
+                  <option value="qwen/qwen3-vl-8b-instruct">qwen/qwen3-vl-8b-instruct (8B 多模态)</option>
+                </optgroup>
+                <optgroup label="✏️ 自定义">
+                  <option value="custom">✏️ 自定义模型名称...</option>
+                </optgroup>
+              </select>
+              <input type="text" id="settingOpenRouterCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID, 如 qwen/qwen3-asr-flash-2026-02-10...">
+            </div>
           </div>
 
-          <!-- API Base URL / Endpoint (Optional) -->
-          <div class="form-group">
-            <label class="form-label" for="settingBaseUrl">
-              <span>API Base URL / 服务端点 (可选)</span>
-              <span class="text-muted text-xs">阿里云百炼新加坡区 / 自定义工作区</span>
-            </label>
-            <input type="text" id="settingBaseUrl" class="form-input font-mono" placeholder="例如: https://ws-xxx.ap-southeast-1.maas.aliyuncs.com/api/v1">
-            <div class="endpoint-presets-bar">
-              <span class="text-xs text-muted">快捷端点:</span>
-              <button type="button" class="preset-tag" data-url="https://dashscope.aliyuncs.com/api/v1">🇨🇳 百炼默认(北京)</button>
-              <button type="button" class="preset-tag" data-url="https://dashscope-intl.aliyuncs.com/api/v1">🇸🇬 百炼国际(新加坡)</button>
-              <button type="button" class="preset-tag" data-url="https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1">🏢 新加坡工作区</button>
+          <!-- ==================== Tab Pane 2: Alibaba Cloud ==================== -->
+          <div id="paneAlibaba" class="settings-tab-pane hidden">
+            <div class="provider-banner-card">
+              <div class="provider-banner-info">
+                <div class="provider-badge-icon">☁️</div>
+                <div>
+                  <h4>阿里云百炼 / DashScope</h4>
+                  <p>支持 <code>qwen-audio-3.0-asr-flash-filetrans</code> 原生离线长录音转写</p>
+                </div>
+              </div>
+              <label class="provider-active-toggle" title="设为当前生效服务商">
+                <input type="radio" name="active_provider_choice" value="dashscope" id="radioProviderDashScope">
+                <span>当前使用</span>
+              </label>
             </div>
-            <div class="form-hint">如使用阿里云百炼新加坡区或专属工作区，请填入对应地址；系统会自动适配 <code>/api/v1</code></div>
-          </div>
 
-          <!-- Model Selection -->
-          <div class="form-group">
-            <label class="form-label" for="settingModelSelect">
-              <span>识别模型 (Model)</span>
-              <span id="modelDocLinkContainer">
-                <button type="button" id="refreshModelsBtn" class="btn btn-ghost btn-sm text-xs" title="从 OpenRouter 实时同步最新 Qwen 模型列表">🔄 刷新模型</button>
-                <a href="https://openrouter.ai/qwen" target="_blank" class="text-link">OpenRouter Qwen 专区 ↗</a>
-              </span>
-            </label>
-            <select id="settingModelSelect" class="form-select">
-              <optgroup label="🌟 OpenRouter 语音识别 (ASR 极速)">
-                <option value="qwen/qwen3-asr-flash-2026-02-10" selected>⚡ qwen/qwen3-asr-flash-2026-02-10 (2026-02-10 最新极速 ASR)</option>
-              </optgroup>
-              <optgroup label="🧠 OpenRouter Qwen 3.7 / 3.8 旗舰系列">
-                <option value="qwen/qwen3.7-flash">qwen/qwen3.7-flash (Qwen 3.7 闪电高速)</option>
-                <option value="qwen/qwen3.7-plus">qwen/qwen3.7-plus (Qwen 3.7 旗舰增强)</option>
-                <option value="qwen/qwen3.7-max">qwen/qwen3.7-max (Qwen 3.7 顶级推理)</option>
-                <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Qwen 3.8 27B 稠密视觉/多模态)</option>
-                <option value="qwen/qwen3.8-max">qwen/qwen3.8-max (Qwen 3.8 Max 超大规模)</option>
-              </optgroup>
-              <optgroup label="⚡ OpenRouter Qwen 3.5 常用系列">
-                <option value="qwen/qwen3.5-flash-02-23">qwen/qwen3.5-flash-02-23 (Qwen 3.5 高性价比)</option>
-                <option value="qwen/qwen3.5-plus-02-15">qwen/qwen3.5-plus-02-15 (Qwen 3.5 Plus)</option>
-                <option value="qwen/qwen3.5-27b">qwen/qwen3.5-27b (Qwen 3.5 27B)</option>
-              </optgroup>
-              <optgroup label="👁️ OpenRouter 多模态视觉/音频系列">
-                <option value="qwen/qwen3-vl-32b-instruct">qwen/qwen3-vl-32b-instruct (32B 多模态)</option>
-                <option value="qwen/qwen3-vl-8b-instruct">qwen/qwen3-vl-8b-instruct (8B 多模态轻量)</option>
-              </optgroup>
-              <optgroup label="☁️ 阿里云百炼 / DashScope 平台">
-                <option value="qwen-audio-3.0-asr-flash-filetrans">qwen-audio-3.0-asr-flash-filetrans (3.0 Flash 离线长录音转写)</option>
-                <option value="qwen3-asr-flash-filetrans">qwen3-asr-flash-filetrans (Qwen3 Flash 录音文件转写)</option>
+            <!-- DashScope API Key -->
+            <div class="form-group">
+              <label class="form-label" for="settingDashScopeApiKey">
+                <span>DashScope API Key</span>
+                <a href="https://bailian.console.aliyun.com/?apiKey=1" target="_blank" class="text-link">获取百炼 Key ↗</a>
+              </label>
+              <div class="input-with-action">
+                <input type="password" id="settingDashScopeApiKey" class="form-input font-mono" placeholder="sk-...">
+                <button type="button" id="toggleDashScopeKeyVisibilityBtn" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
+                <button type="button" id="testDashScopeKeyBtn" class="btn btn-secondary btn-sm">测试连接</button>
+              </div>
+              <div id="dashScopeKeyValidationResult" class="form-hint">支持在浏览器本地保存，或配置环境变量 <code>DASHSCOPE_API_KEY</code></div>
+            </div>
+
+            <!-- API Base URL / Endpoint -->
+            <div class="form-group">
+              <label class="form-label" for="settingDashScopeBaseUrl">
+                <span>API Base URL / 服务端点 (可选)</span>
+                <span class="text-muted text-xs">新加坡国际区 / 专属工作区</span>
+              </label>
+              <input type="text" id="settingDashScopeBaseUrl" class="form-input font-mono" placeholder="例如: https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1">
+              <div class="endpoint-presets-bar">
+                <span class="text-xs text-muted">快捷端点:</span>
+                <button type="button" class="preset-tag" data-url="https://dashscope.aliyuncs.com/api/v1">🇨🇳 默认北京</button>
+                <button type="button" class="preset-tag" data-url="https://dashscope-intl.aliyuncs.com/api/v1">🇸🇬 国际新加坡</button>
+                <button type="button" class="preset-tag" data-url="https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1">🏢 新加坡工作区</button>
+              </div>
+              <div class="form-hint">如使用阿里云百炼新加坡区或专属工作区，请填入对应地址；系统会自动规范为 <code>/api/v1</code></div>
+            </div>
+
+            <!-- DashScope Model Select -->
+            <div class="form-group">
+              <label class="form-label" for="settingDashScopeModel">
+                <span>百炼识别模型 (DashScope Models)</span>
+                <a href="https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02" target="_blank" class="text-link">官方文档 ↗</a>
+              </label>
+              <select id="settingDashScopeModel" class="form-select">
+                <option value="qwen-audio-3.0-asr-flash-filetrans" selected>⚡ qwen-audio-3.0-asr-flash-filetrans (3.0 Flash 录音转写)</option>
+                <option value="qwen3-asr-flash-filetrans">qwen3-asr-flash-filetrans (Qwen3 Flash 录音转写)</option>
                 <option value="qwen-audio-asr">qwen-audio-asr (通用音频多模态识别)</option>
                 <option value="sensevoice-v1">sensevoice-v1 (多语种 / 富文本语音识别)</option>
                 <option value="paraformer-v2">paraformer-v2 (通义非实时语音识别)</option>
                 <option value="paraformer-8k-v2">paraformer-8k-v2 (8k 电话客服录音)</option>
-              </optgroup>
-              <optgroup label="✏️ 自定义">
                 <option value="custom">✏️ 自定义模型名称...</option>
-              </optgroup>
-            </select>
-            <input type="text" id="settingCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID, 如 qwen/qwen3-asr-flash-2026-02-10...">
-          </div>
-
-          <!-- Language Hints -->
-          <div class="form-group">
-            <label class="form-label">
-              <span>语言识别偏好 (Language Hints)</span>
-              <span class="badge badge-sm">最多4种</span>
-            </label>
-            <div class="language-chips" id="langChipsContainer">
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="zh" checked> <span>普通话 (zh)</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="wuu"> <span>上海话/吴语 (wuu)</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="yue"> <span>粤语 (yue)</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="sichuan"> <span>四川话</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="en"> <span>英语 (en)</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ja"> <span>日语 (ja)</span></label>
-              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ko"> <span>韩语 (ko)</span></label>
-            </div>
-            <div class="form-hint">支持普通话、上海话/吴语、粤语、四川话等22+方言及多语种；不勾选时模型将自动执行语种与方言检测</div>
-          </div>
-
-          <!-- Advanced Toggles Grid -->
-          <div class="form-grid-2">
-            <!-- Speaker Diarization -->
-            <div class="form-check-card">
-              <div class="form-check-header">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingDiarization">
-                  <span class="toggle-slider"></span>
-                </label>
-                <div class="form-check-labels">
-                  <strong>说话人区分 (Diarization)</strong>
-                  <p class="text-muted">自动识别区分不同发言人</p>
-                </div>
-              </div>
-              <div id="speakerCountGroup" class="form-sub-input hidden">
-                <label for="settingSpeakerCount" class="text-sm">预期说话人数量 (可选):</label>
-                <input type="number" id="settingSpeakerCount" class="form-input form-input-sm" min="1" max="10" placeholder="自动推断">
-              </div>
-            </div>
-
-            <!-- Disfluency Removal -->
-            <div class="form-check-card">
-              <div class="form-check-header">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingDisfluency" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-                <div class="form-check-labels">
-                  <strong>语气词过滤 (Disfluency)</strong>
-                  <p class="text-muted">过滤口语停顿词 (如"嗯","啊")</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Timestamp Alignment -->
-            <div class="form-check-card">
-              <div class="form-check-header">
-                <label class="toggle-switch">
-                  <input type="checkbox" id="settingAlignTimestamps" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-                <div class="form-check-labels">
-                  <strong>高精度时间戳校准</strong>
-                  <p class="text-muted">校准字级与句级起止毫秒</p>
-                </div>
-              </div>
+              </select>
+              <input type="text" id="settingDashScopeCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义百炼模型名称...">
             </div>
           </div>
 
-          <!-- Prompt / Vocabulary Context -->
-          <div class="form-group mt-3">
-            <label class="form-label" for="settingPrompt">
-              <span>热词与领域上下文 (Prompt / Context)</span>
-              <span class="text-muted text-xs">提升专有名词准确率</span>
-            </label>
-            <textarea id="settingPrompt" class="form-textarea" rows="2" placeholder="输入行业术语、人名、产品名或背景信息，例如: 阿里巴巴, Qwen-Audio, 通义千问, 模型工作室, ASR"></textarea>
+          <!-- ==================== Tab Pane 3: Preferences ==================== -->
+          <div id="panePreferences" class="settings-tab-pane hidden">
+            <!-- Language & Dialects Hints -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>语言与方言识别偏好 (Language & Dialect Hints)</span>
+                <span class="badge badge-sm">支持多选 (最多4种)</span>
+              </label>
+              <div class="language-chips" id="langChipsContainer">
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="zh" checked> <span>普通话 (zh)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="wuu"> <span>上海话/吴语 (wuu)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="yue"> <span>粤语 (yue)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="sichuan"> <span>四川话</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="en"> <span>英语 (en)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ja"> <span>日语 (ja)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ko"> <span>韩语 (ko)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="minnan"> <span>闽南语</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="tianjin"> <span>天津话</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="dongbei"> <span>东北话</span></label>
+              </div>
+              <div class="form-hint">支持普通话、上海话/吴语、粤语、四川话等22+方言及多语种；不勾选时模型将自动执行语种与方言检测</div>
+            </div>
+
+            <!-- Advanced Toggles Grid -->
+            <div class="form-grid-2">
+              <!-- Speaker Diarization -->
+              <div class="form-check-card">
+                <div class="form-check-header">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="settingDiarization">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="form-check-labels">
+                    <strong>说话人区分 (Diarization)</strong>
+                    <p class="text-muted">自动识别区分不同发言人</p>
+                  </div>
+                </div>
+                <div id="speakerCountGroup" class="form-sub-input hidden">
+                  <label for="settingSpeakerCount" class="text-sm">预期说话人数量 (可选):</label>
+                  <input type="number" id="settingSpeakerCount" class="form-input form-input-sm" min="1" max="10" placeholder="自动推断">
+                </div>
+              </div>
+
+              <!-- Disfluency Removal -->
+              <div class="form-check-card">
+                <div class="form-check-header">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="settingDisfluency" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="form-check-labels">
+                    <strong>语气词过滤 (Disfluency)</strong>
+                    <p class="text-muted">过滤口语停顿词 (如"嗯","啊")</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Timestamp Alignment -->
+              <div class="form-check-card">
+                <div class="form-check-header">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="settingAlignTimestamps" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="form-check-labels">
+                    <strong>高精度时间戳校准</strong>
+                    <p class="text-muted">校准字级与句级起止毫秒</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prompt / Vocabulary Context -->
+            <div class="form-group mt-3">
+              <label class="form-label" for="settingPrompt">
+                <span>热词与领域上下文 (Prompt / Context)</span>
+                <span class="text-muted text-xs">提升专有名词准确率</span>
+              </label>
+              <textarea id="settingPrompt" class="form-textarea" rows="2" placeholder="输入行业术语、人名、产品名或背景信息，例如: 阿里巴巴, Qwen-Audio, 通义千问, 模型工作室, ASR"></textarea>
+            </div>
           </div>
         </div>
 

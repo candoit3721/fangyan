@@ -16,9 +16,20 @@
     authPasscode: sessionStorage.getItem('app_passcode') || localStorage.getItem('app_passcode') || '',
     authRequired: false,
 
-    apiKey: localStorage.getItem('asr_api_key') || localStorage.getItem('dashscope_api_key') || '',
-    baseUrl: localStorage.getItem('asr_base_url') || '',
-    model: localStorage.getItem('asr_model') || localStorage.getItem('dashscope_model') || 'qwen/qwen3-asr-flash-2026-02-10',
+    // Active Provider: 'openrouter' | 'dashscope'
+    activeProvider: localStorage.getItem('asr_active_provider') || 'openrouter',
+    openrouterApiKey: localStorage.getItem('asr_openrouter_api_key') || (localStorage.getItem('asr_api_key') && localStorage.getItem('asr_api_key').startsWith('sk-or-') ? localStorage.getItem('asr_api_key') : ''),
+    dashscopeApiKey: localStorage.getItem('asr_dashscope_api_key') || localStorage.getItem('dashscope_api_key') || (localStorage.getItem('asr_api_key') && !localStorage.getItem('asr_api_key').startsWith('sk-or-') ? localStorage.getItem('asr_api_key') : ''),
+    dashscopeBaseUrl: localStorage.getItem('asr_dashscope_base_url') || localStorage.getItem('asr_base_url') || '',
+
+    openrouterModel: localStorage.getItem('asr_openrouter_model') || 'qwen/qwen3-asr-flash-2026-02-10',
+    dashscopeModel: localStorage.getItem('asr_dashscope_model') || 'qwen-audio-3.0-asr-flash-filetrans',
+
+    // Unified active parameters for requests
+    apiKey: '',
+    baseUrl: '',
+    model: 'qwen/qwen3-asr-flash-2026-02-10',
+
     languageHints: JSON.parse(localStorage.getItem('asr_lang_hints') || localStorage.getItem('dashscope_lang_hints') || '["zh"]'),
     diarization: localStorage.getItem('asr_diarization') === 'true',
     speakerCount: localStorage.getItem('asr_speaker_count') || '',
@@ -51,6 +62,21 @@
     pollStartTime: 0,
   };
 
+  function syncActiveState() {
+    if (state.activeProvider === 'openrouter') {
+      state.apiKey = state.openrouterApiKey;
+      state.model = state.openrouterModel;
+      state.baseUrl = '';
+    } else {
+      state.apiKey = state.dashscopeApiKey;
+      state.model = state.dashscopeModel;
+      state.baseUrl = state.dashscopeBaseUrl;
+    }
+  }
+
+  // Initial synchronization
+  syncActiveState();
+
   // DOM Elements
   const el = {
     // Header & Auth
@@ -59,89 +85,76 @@
     setupStatusDot: document.getElementById('setupStatusDot'),
     toggleHistoryBtn: document.getElementById('toggleHistoryBtn'),
     lockAppBtn: document.getElementById('lockAppBtn'),
-
-    // Login Passcode Modal
     loginModal: document.getElementById('loginModal'),
-    loginForm: document.getElementById('loginForm'),
     loginPasscodeInput: document.getElementById('loginPasscodeInput'),
-    toggleLoginPasscodeVisibility: document.getElementById('toggleLoginPasscodeVisibility'),
     submitLoginBtn: document.getElementById('submitLoginBtn'),
     loginErrorMsg: document.getElementById('loginErrorMsg'),
 
-    // Tabs
+    // Top Navigation Tabs
     tabRecordBtn: document.getElementById('tabRecordBtn'),
     tabUploadBtn: document.getElementById('tabUploadBtn'),
     recordPanel: document.getElementById('recordPanel'),
     uploadPanel: document.getElementById('uploadPanel'),
 
-    // Recorder
-    visualizerCanvas: document.getElementById('visualizerCanvas'),
-    recordingTimer: document.getElementById('recordingTimer'),
+    // Recording Controls
     startRecordBtn: document.getElementById('startRecordBtn'),
-    recordingActiveActions: document.getElementById('recordingActiveActions'),
+    micBtnCenter: document.getElementById('micBtnCenter'),
+    recordStatusText: document.getElementById('recordStatusText'),
+    recordTimerDisplay: document.getElementById('recordTimerDisplay'),
+    waveformCanvas: document.getElementById('waveformCanvas'),
+    recordActionsBar: document.getElementById('recordActionsBar'),
     pauseRecordBtn: document.getElementById('pauseRecordBtn'),
-    pauseIcon: document.getElementById('pauseIcon'),
+    resumeRecordBtn: document.getElementById('resumeRecordBtn'),
     stopRecordBtn: document.getElementById('stopRecordBtn'),
-    cancelRecordBtn: document.getElementById('cancelRecordBtn'),
-    recordingStatusHint: document.getElementById('recordingStatusHint'),
-    recordedPreviewCard: document.getElementById('recordedPreviewCard'),
-    recordedAudioPlayer: document.getElementById('recordedAudioPlayer'),
-    recordedDurationTag: document.getElementById('recordedDurationTag'),
-    transcribeRecordedBtn: document.getElementById('transcribeRecordedBtn'),
-    reRecordBtn: document.getElementById('reRecordBtn'),
+    discardRecordBtn: document.getElementById('discardRecordBtn'),
 
-    // Upload
+    // Upload Controls
     dropZone: document.getElementById('dropZone'),
-    fileInput: document.getElementById('fileInput'),
-    uploadedFileCard: document.getElementById('uploadedFileCard'),
-    uploadedFileName: document.getElementById('uploadedFileName'),
-    uploadedFileSize: document.getElementById('uploadedFileSize'),
-    uploadedAudioPlayer: document.getElementById('uploadedAudioPlayer'),
+    audioFileInput: document.getElementById('audioFileInput'),
+    browseFileBtn: document.getElementById('browseFileBtn'),
+    selectedFileInfo: document.getElementById('selectedFileInfo'),
+    selectedFileName: document.getElementById('selectedFileName'),
+    selectedFileSize: document.getElementById('selectedFileSize'),
     removeFileBtn: document.getElementById('removeFileBtn'),
-    transcribeUploadedBtn: document.getElementById('transcribeUploadedBtn'),
+    startUploadBtn: document.getElementById('startUploadBtn'),
 
-    // Progress
-    processingCard: document.getElementById('processingCard'),
-    progressTitle: document.getElementById('progressTitle'),
-    progressSubtitle: document.getElementById('progressSubtitle'),
-    progressBarFill: document.getElementById('progressBarFill'),
-    progressTaskId: document.getElementById('progressTaskId'),
-    progressTimer: document.getElementById('progressTimer'),
-
-    // Error
+    // Banners & Notifications
     errorBanner: document.getElementById('errorBanner'),
     errorMessage: document.getElementById('errorMessage'),
     closeErrorBtn: document.getElementById('closeErrorBtn'),
 
-    // Results
-    resultsSection: document.getElementById('resultsSection'),
-    globalSyncAudio: document.getElementById('globalSyncAudio'),
-    playerPlayBtn: document.getElementById('playerPlayBtn'),
-    playerPlayIcon: document.getElementById('playerPlayIcon'),
-    playerPauseIcon: document.getElementById('playerPauseIcon'),
-    playerCurrentTime: document.getElementById('playerCurrentTime'),
-    playerTotalTime: document.getElementById('playerTotalTime'),
-    playerScrubber: document.getElementById('playerScrubber'),
-    nowPlayingSentence: document.getElementById('nowPlayingSentence'),
-    playbackSpeedSelect: document.getElementById('playbackSpeedSelect'),
+    // Processing & Progress
+    progressCard: document.getElementById('progressCard'),
+    progressStatusText: document.getElementById('progressStatusText'),
+    progressDetailText: document.getElementById('progressDetailText'),
+    progressBarFill: document.getElementById('progressBarFill'),
+    progressCancelBtn: document.getElementById('progressCancelBtn'),
 
-    // Views
-    viewDialogueBtn: document.getElementById('viewDialogueBtn'),
-    viewDocumentBtn: document.getElementById('viewDocumentBtn'),
+    // Results Section
+    resultSection: document.getElementById('resultSection'),
+    globalSyncAudio: document.getElementById('globalSyncAudio'),
+    playAudioBtn: document.getElementById('playAudioBtn'),
+    audioTimeDisplay: document.getElementById('audioTimeDisplay'),
+    audioTrackSlider: document.getElementById('audioTrackSlider'),
+    audioSpeedSelect: document.getElementById('audioSpeedSelect'),
+
+    // Result Tabs
+    viewKaraokeBtn: document.getElementById('viewKaraokeBtn'),
+    viewPlainBtn: document.getElementById('viewPlainBtn'),
     viewSrtBtn: document.getElementById('viewSrtBtn'),
     viewJsonBtn: document.getElementById('viewJsonBtn'),
-    dialogueViewPane: document.getElementById('dialogueViewPane'),
-    documentViewPane: document.getElementById('documentViewPane'),
+
+    karaokeViewPane: document.getElementById('karaokeViewPane'),
+    plainTextViewPane: document.getElementById('plainTextViewPane'),
     srtViewPane: document.getElementById('srtViewPane'),
     jsonViewPane: document.getElementById('jsonViewPane'),
 
-    sentenceList: document.getElementById('sentenceList'),
-    fullDocumentText: document.getElementById('fullDocumentText'),
+    karaokeSentencesList: document.getElementById('karaokeSentencesList'),
+    plainTextContent: document.getElementById('plainTextContent'),
     srtCodeBlock: document.getElementById('srtCodeBlock'),
     jsonCodeBlock: document.getElementById('jsonCodeBlock'),
-    transcriptSearchInput: document.getElementById('transcriptSearchInput'),
 
-    // Meta
+    // Metadata
     metaModelName: document.getElementById('metaModelName'),
     metaDuration: document.getElementById('metaDuration'),
     metaSentenceCount: document.getElementById('metaSentenceCount'),
@@ -152,17 +165,39 @@
     exportMenu: document.getElementById('exportMenu'),
     copyAllTextBtn: document.getElementById('copyAllTextBtn'),
 
-    // Settings Modal
+    // Settings Modal Tabs
     settingsModal: document.getElementById('settingsModal'),
     closeSettingsBtn: document.getElementById('closeSettingsBtn'),
-    settingApiKey: document.getElementById('settingApiKey'),
-    toggleKeyVisibilityBtn: document.getElementById('toggleKeyVisibilityBtn'),
-    testKeyBtn: document.getElementById('testKeyBtn'),
-    keyValidationResult: document.getElementById('keyValidationResult'),
-    settingBaseUrl: document.getElementById('settingBaseUrl'),
-    settingModelSelect: document.getElementById('settingModelSelect'),
-    refreshModelsBtn: document.getElementById('refreshModelsBtn'),
-    settingCustomModel: document.getElementById('settingCustomModel'),
+    tabBtnOpenRouter: document.getElementById('tabBtnOpenRouter'),
+    tabBtnAlibaba: document.getElementById('tabBtnAlibaba'),
+    tabBtnPreferences: document.getElementById('tabBtnPreferences'),
+    paneOpenRouter: document.getElementById('paneOpenRouter'),
+    paneAlibaba: document.getElementById('paneAlibaba'),
+    panePreferences: document.getElementById('panePreferences'),
+    dotOpenRouter: document.getElementById('dotOpenRouter'),
+    dotAlibaba: document.getElementById('dotAlibaba'),
+    radioProviderOpenRouter: document.getElementById('radioProviderOpenRouter'),
+    radioProviderDashScope: document.getElementById('radioProviderDashScope'),
+
+    // OpenRouter Settings
+    settingOpenRouterApiKey: document.getElementById('settingOpenRouterApiKey'),
+    toggleOpenRouterKeyVisibilityBtn: document.getElementById('toggleOpenRouterKeyVisibilityBtn'),
+    testOpenRouterKeyBtn: document.getElementById('testOpenRouterKeyBtn'),
+    openRouterKeyValidationResult: document.getElementById('openRouterKeyValidationResult'),
+    settingOpenRouterModel: document.getElementById('settingOpenRouterModel'),
+    refreshOpenRouterModelsBtn: document.getElementById('refreshOpenRouterModelsBtn'),
+    settingOpenRouterCustomModel: document.getElementById('settingOpenRouterCustomModel'),
+
+    // Alibaba Cloud DashScope Settings
+    settingDashScopeApiKey: document.getElementById('settingDashScopeApiKey'),
+    toggleDashScopeKeyVisibilityBtn: document.getElementById('toggleDashScopeKeyVisibilityBtn'),
+    testDashScopeKeyBtn: document.getElementById('testDashScopeKeyBtn'),
+    dashScopeKeyValidationResult: document.getElementById('dashScopeKeyValidationResult'),
+    settingDashScopeBaseUrl: document.getElementById('settingDashScopeBaseUrl'),
+    settingDashScopeModel: document.getElementById('settingDashScopeModel'),
+    settingDashScopeCustomModel: document.getElementById('settingDashScopeCustomModel'),
+
+    // Preferences Settings
     langChipsContainer: document.getElementById('langChipsContainer'),
     settingDiarization: document.getElementById('settingDiarization'),
     speakerCountGroup: document.getElementById('speakerCountGroup'),
@@ -315,13 +350,17 @@
       const resp = await apiFetch('/api/config');
       if (resp.ok) {
         const config = await resp.json();
-        if (config.has_env_api_key && !state.apiKey) {
-          state.apiKey = config.masked_openrouter_key || config.masked_dashscope_key || 'configured_in_env';
-          updateUIHeader();
+        if (config.has_openrouter_key && !state.openrouterApiKey) {
+          state.openrouterApiKey = config.masked_openrouter_key || 'configured_in_env';
         }
-        if (config.dashscope_base_url && !state.baseUrl) {
-          state.baseUrl = config.dashscope_base_url;
+        if (config.has_dashscope_key && !state.dashscopeApiKey) {
+          state.dashscopeApiKey = config.masked_dashscope_key || 'configured_in_env';
         }
+        if (config.dashscope_base_url && !state.dashscopeBaseUrl) {
+          state.dashscopeBaseUrl = config.dashscope_base_url;
+        }
+        syncActiveState();
+        updateUIHeader();
       }
     } catch (e) {
       console.warn('Could not fetch server config:', e);
@@ -329,6 +368,7 @@
   }
 
   function updateUIHeader() {
+    syncActiveState();
     const hasKey = Boolean(state.apiKey && state.apiKey.length > 3);
     const shortModel = state.model.split('/').pop().replace('-filetrans', '');
     if (el.setupBtnLabel) {
@@ -336,7 +376,21 @@
     }
     if (el.setupStatusDot) {
       el.setupStatusDot.classList.toggle('active', hasKey);
-      el.setupStatusDot.title = hasKey ? 'API Key 已配置' : 'API Key 未配置，点击设置';
+      el.setupStatusDot.title = hasKey ? `API Key 已配置 (${state.activeProvider})` : 'API Key 未配置，点击设置';
+    }
+
+    // Update active dots on tabs
+    if (el.dotOpenRouter) {
+      el.dotOpenRouter.classList.toggle('hidden', state.activeProvider !== 'openrouter');
+    }
+    if (el.dotAlibaba) {
+      el.dotAlibaba.classList.toggle('hidden', state.activeProvider !== 'dashscope');
+    }
+    if (el.radioProviderOpenRouter) {
+      el.radioProviderOpenRouter.checked = state.activeProvider === 'openrouter';
+    }
+    if (el.radioProviderDashScope) {
+      el.radioProviderDashScope.checked = state.activeProvider === 'dashscope';
     }
   }
 
@@ -447,24 +501,50 @@
     el.settingsModal.addEventListener('click', (e) => {
       if (e.target === el.settingsModal) closeSettingsModal();
     });
-    el.toggleKeyVisibilityBtn.addEventListener('click', toggleKeyVisibility);
-    el.testKeyBtn.addEventListener('click', testApiKey);
-    if (el.refreshModelsBtn) {
-      el.refreshModelsBtn.addEventListener('click', refreshOpenRouterModels);
+
+    // Tab Navigation
+    if (el.tabBtnOpenRouter) el.tabBtnOpenRouter.addEventListener('click', () => switchSettingsTab('openrouter'));
+    if (el.tabBtnAlibaba) el.tabBtnAlibaba.addEventListener('click', () => switchSettingsTab('alibaba'));
+    if (el.tabBtnPreferences) el.tabBtnPreferences.addEventListener('click', () => switchSettingsTab('preferences'));
+
+    // Provider Radios
+    if (el.radioProviderOpenRouter) {
+      el.radioProviderOpenRouter.addEventListener('change', (e) => {
+        if (e.target.checked) setActiveProvider('openrouter');
+      });
     }
-    el.settingModelSelect.addEventListener('change', handleModelSelectChange);
-    el.settingDiarization.addEventListener('change', (e) => {
-      el.speakerCountGroup.classList.toggle('hidden', !e.target.checked);
-    });
-    el.saveSettingsBtn.addEventListener('click', saveSettings);
-    el.resetSettingsBtn.addEventListener('click', resetSettings);
+    if (el.radioProviderDashScope) {
+      el.radioProviderDashScope.addEventListener('change', (e) => {
+        if (e.target.checked) setActiveProvider('dashscope');
+      });
+    }
+
+    // OpenRouter Key & Model
+    if (el.toggleOpenRouterKeyVisibilityBtn) el.toggleOpenRouterKeyVisibilityBtn.addEventListener('click', toggleOpenRouterKeyVisibility);
+    if (el.testOpenRouterKeyBtn) el.testOpenRouterKeyBtn.addEventListener('click', testOpenRouterKey);
+    if (el.refreshOpenRouterModelsBtn) el.refreshOpenRouterModelsBtn.addEventListener('click', refreshOpenRouterModels);
+    if (el.settingOpenRouterModel) el.settingOpenRouterModel.addEventListener('change', handleOpenRouterModelChange);
+
+    // DashScope Key & Model
+    if (el.toggleDashScopeKeyVisibilityBtn) el.toggleDashScopeKeyVisibilityBtn.addEventListener('click', toggleDashScopeKeyVisibility);
+    if (el.testDashScopeKeyBtn) el.testDashScopeKeyBtn.addEventListener('click', testDashScopeKey);
+    if (el.settingDashScopeModel) el.settingDashScopeModel.addEventListener('change', handleDashScopeModelChange);
+
+    // Preferences & Toggles
+    if (el.settingDiarization) {
+      el.settingDiarization.addEventListener('change', (e) => {
+        if (el.speakerCountGroup) el.speakerCountGroup.classList.toggle('hidden', !e.target.checked);
+      });
+    }
+    if (el.saveSettingsBtn) el.saveSettingsBtn.addEventListener('click', saveSettings);
+    if (el.resetSettingsBtn) el.resetSettingsBtn.addEventListener('click', resetSettings);
 
     // Endpoint preset tags
     document.querySelectorAll('.preset-tag').forEach((btn) => {
       btn.addEventListener('click', () => {
-        if (el.settingBaseUrl && btn.dataset.url) {
-          el.settingBaseUrl.value = btn.dataset.url;
-          el.settingBaseUrl.focus();
+        if (el.settingDashScopeBaseUrl && btn.dataset.url) {
+          el.settingDashScopeBaseUrl.value = btn.dataset.url;
+          el.settingDashScopeBaseUrl.focus();
         }
       });
     });
@@ -1157,53 +1237,119 @@
   }
 
   // ==========================================================================
-  // Settings Modal Controller
+  // Settings Modal Controller (Multi-tabbed for OpenRouter, Alibaba & Common)
   // ==========================================================================
 
-  function openSettingsModal() {
-    el.settingApiKey.value = state.apiKey && state.apiKey !== 'configured_in_env' ? state.apiKey : '';
+  function switchSettingsTab(tabName) {
+    const tabs = {
+      openrouter: { btn: el.tabBtnOpenRouter, pane: el.paneOpenRouter },
+      alibaba: { btn: el.tabBtnAlibaba, pane: el.paneAlibaba },
+      preferences: { btn: el.tabBtnPreferences, pane: el.panePreferences },
+    };
 
-    // Model Select
-    const knownModels = [
-      'qwen/qwen3-asr-flash-2026-02-10',
-      'qwen-audio-3.0-asr-flash-filetrans',
-      'qwen3-asr-flash-filetrans',
-      'qwen-audio-asr',
-      'sensevoice-v1',
-      'paraformer-v2',
-      'paraformer-8k-v2',
-    ];
-    if (knownModels.includes(state.model)) {
-      el.settingModelSelect.value = state.model;
-      el.settingCustomModel.classList.add('hidden');
-    } else {
-      el.settingModelSelect.value = 'custom';
-      el.settingCustomModel.value = state.model;
-      el.settingCustomModel.classList.remove('hidden');
-    }
-
-    // Language Chips
-    const checkboxes = el.langChipsContainer.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach((cb) => {
-      cb.checked = state.languageHints.includes(cb.value);
+    Object.entries(tabs).forEach(([name, item]) => {
+      if (item.btn) item.btn.classList.toggle('active', name === tabName);
+      if (item.pane) item.pane.classList.toggle('hidden', name !== tabName);
     });
+  }
 
-    // Toggles
-    el.settingDiarization.checked = state.diarization;
-    el.speakerCountGroup.classList.toggle('hidden', !state.diarization);
-    el.settingSpeakerCount.value = state.speakerCount || '';
-    el.settingDisfluency.checked = state.disfluency;
-    el.settingAlignTimestamps.checked = state.alignTimestamps;
-    el.settingPrompt.value = state.prompt || '';
+  function setActiveProvider(provider) {
+    state.activeProvider = provider;
+    localStorage.setItem('asr_active_provider', provider);
+    syncActiveState();
+    updateUIHeader();
+    showToast(`当前默认服务商已切换为: ${provider === 'openrouter' ? '🌟 OpenRouter' : '☁️ 阿里云百炼'}`);
+  }
 
-    // API Base URL
-    if (el.settingBaseUrl) {
-      el.settingBaseUrl.value = state.baseUrl || '';
+  function openSettingsModal() {
+    // 1. OpenRouter Pane
+    if (el.settingOpenRouterApiKey) {
+      el.settingOpenRouterApiKey.value = state.openrouterApiKey && state.openrouterApiKey !== 'configured_in_env' ? state.openrouterApiKey : '';
+    }
+    if (el.settingOpenRouterModel) {
+      const orKnown = [
+        'qwen/qwen3-asr-flash-2026-02-10',
+        'qwen/qwen3.7-flash',
+        'qwen/qwen3.7-plus',
+        'qwen/qwen3.7-max',
+        'qwen/qwen3.8-27b',
+        'qwen/qwen3.8-max',
+        'qwen/qwen3.5-flash-02-23',
+        'qwen/qwen3.5-plus-02-15',
+        'qwen/qwen3.5-27b',
+        'qwen/qwen3-vl-32b-instruct',
+        'qwen/qwen3-vl-8b-instruct',
+      ];
+      if (orKnown.includes(state.openrouterModel)) {
+        el.settingOpenRouterModel.value = state.openrouterModel;
+        if (el.settingOpenRouterCustomModel) el.settingOpenRouterCustomModel.classList.add('hidden');
+      } else {
+        el.settingOpenRouterModel.value = 'custom';
+        if (el.settingOpenRouterCustomModel) {
+          el.settingOpenRouterCustomModel.value = state.openrouterModel;
+          el.settingOpenRouterCustomModel.classList.remove('hidden');
+        }
+      }
     }
 
-    el.keyValidationResult.textContent = '支持在浏览器本地保存，或配置系统环境变量 OPENROUTER_API_KEY / DASHSCOPE_API_KEY';
-    el.keyValidationResult.style.color = '';
+    // 2. Alibaba DashScope Pane
+    if (el.settingDashScopeApiKey) {
+      el.settingDashScopeApiKey.value = state.dashscopeApiKey && state.dashscopeApiKey !== 'configured_in_env' ? state.dashscopeApiKey : '';
+    }
+    if (el.settingDashScopeBaseUrl) {
+      el.settingDashScopeBaseUrl.value = state.dashscopeBaseUrl || '';
+    }
+    if (el.settingDashScopeModel) {
+      const dsKnown = [
+        'qwen-audio-3.0-asr-flash-filetrans',
+        'qwen3-asr-flash-filetrans',
+        'qwen-audio-asr',
+        'sensevoice-v1',
+        'paraformer-v2',
+        'paraformer-8k-v2',
+      ];
+      if (dsKnown.includes(state.dashscopeModel)) {
+        el.settingDashScopeModel.value = state.dashscopeModel;
+        if (el.settingDashScopeCustomModel) el.settingDashScopeCustomModel.classList.add('hidden');
+      } else {
+        el.settingDashScopeModel.value = 'custom';
+        if (el.settingDashScopeCustomModel) {
+          el.settingDashScopeCustomModel.value = state.dashscopeModel;
+          el.settingDashScopeCustomModel.classList.remove('hidden');
+        }
+      }
+    }
 
+    // 3. Preferences Pane
+    if (el.langChipsContainer) {
+      const checkboxes = el.langChipsContainer.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach((cb) => {
+        cb.checked = state.languageHints.includes(cb.value);
+      });
+    }
+    if (el.settingDiarization) {
+      el.settingDiarization.checked = state.diarization;
+      if (el.speakerCountGroup) el.speakerCountGroup.classList.toggle('hidden', !state.diarization);
+    }
+    if (el.settingSpeakerCount) el.settingSpeakerCount.value = state.speakerCount || '';
+    if (el.settingDisfluency) el.settingDisfluency.checked = state.disfluency;
+    if (el.settingAlignTimestamps) el.settingAlignTimestamps.checked = state.alignTimestamps;
+    if (el.settingPrompt) el.settingPrompt.value = state.prompt || '';
+
+    // Switch to active tab by default
+    switchSettingsTab(state.activeProvider === 'dashscope' ? 'alibaba' : 'openrouter');
+
+    // Clear validation results
+    if (el.openRouterKeyValidationResult) {
+      el.openRouterKeyValidationResult.textContent = '支持在浏览器本地保存，或配置系统环境变量 OPENROUTER_API_KEY';
+      el.openRouterKeyValidationResult.style.color = '';
+    }
+    if (el.dashScopeKeyValidationResult) {
+      el.dashScopeKeyValidationResult.textContent = '支持在浏览器本地保存，或配置系统环境变量 DASHSCOPE_API_KEY';
+      el.dashScopeKeyValidationResult.style.color = '';
+    }
+
+    updateUIHeader();
     el.settingsModal.classList.remove('hidden');
   }
 
@@ -1211,167 +1357,249 @@
     el.settingsModal.classList.add('hidden');
   }
 
-  function toggleKeyVisibility() {
-    if (el.settingApiKey.type === 'password') {
-      el.settingApiKey.type = 'text';
+  function toggleOpenRouterKeyVisibility() {
+    if (el.settingOpenRouterApiKey.type === 'password') {
+      el.settingOpenRouterApiKey.type = 'text';
     } else {
-      el.settingApiKey.type = 'password';
+      el.settingOpenRouterApiKey.type = 'password';
     }
   }
 
-  async function testApiKey() {
-    const key = el.settingApiKey.value.trim();
+  function toggleDashScopeKeyVisibility() {
+    if (el.settingDashScopeApiKey.type === 'password') {
+      el.settingDashScopeApiKey.type = 'text';
+    } else {
+      el.settingDashScopeApiKey.type = 'password';
+    }
+  }
+
+  async function testOpenRouterKey() {
+    const key = el.settingOpenRouterApiKey ? el.settingOpenRouterApiKey.value.trim() : '';
     if (!key) {
-      el.keyValidationResult.textContent = '⚠️ 请先输入 API Key';
-      el.keyValidationResult.style.color = '#f59e0b';
+      if (el.openRouterKeyValidationResult) {
+        el.openRouterKeyValidationResult.textContent = '⚠️ 请先输入 OpenRouter API Key';
+        el.openRouterKeyValidationResult.style.color = '#f59e0b';
+      }
       return;
     }
 
-    const isOr = key.startsWith('sk-or-');
-    const baseUrl = el.settingBaseUrl ? el.settingBaseUrl.value.trim() : '';
-    el.keyValidationResult.textContent = `🔄 正在测试 ${isOr ? 'OpenRouter' : 'DashScope'} 接口连接...`;
-    el.keyValidationResult.style.color = '#9ca3af';
+    if (el.openRouterKeyValidationResult) {
+      el.openRouterKeyValidationResult.textContent = '🔄 正在测试 OpenRouter 接口连接...';
+      el.openRouterKeyValidationResult.style.color = '#9ca3af';
+    }
 
     try {
       const resp = await apiFetch('/api/verify_key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: key, base_url: baseUrl }),
+        body: JSON.stringify({ api_key: key, provider: 'openrouter' }),
       });
       const data = await resp.json();
       if (data.valid) {
-        el.keyValidationResult.textContent = '✅ ' + (data.message || 'API Key 验证成功！');
-        el.keyValidationResult.style.color = '#10b981';
+        el.openRouterKeyValidationResult.textContent = '✅ ' + (data.message || 'OpenRouter API Key 验证成功！');
+        el.openRouterKeyValidationResult.style.color = '#10b981';
       } else {
-        el.keyValidationResult.textContent = '❌ ' + (data.message || 'API Key 验证失败');
-        el.keyValidationResult.style.color = '#ef4444';
+        el.openRouterKeyValidationResult.textContent = '❌ ' + (data.message || 'OpenRouter API Key 验证失败');
+        el.openRouterKeyValidationResult.style.color = '#ef4444';
       }
     } catch (e) {
-      el.keyValidationResult.textContent = '❌ 网络连接错误: ' + e.message;
-      el.keyValidationResult.style.color = '#ef4444';
+      if (el.openRouterKeyValidationResult) {
+        el.openRouterKeyValidationResult.textContent = '❌ 网络连接错误: ' + e.message;
+        el.openRouterKeyValidationResult.style.color = '#ef4444';
+      }
+    }
+  }
+
+  async function testDashScopeKey() {
+    const key = el.settingDashScopeApiKey ? el.settingDashScopeApiKey.value.trim() : '';
+    const baseUrl = el.settingDashScopeBaseUrl ? el.settingDashScopeBaseUrl.value.trim() : '';
+    if (!key) {
+      if (el.dashScopeKeyValidationResult) {
+        el.dashScopeKeyValidationResult.textContent = '⚠️ 请先输入 DashScope API Key';
+        el.dashScopeKeyValidationResult.style.color = '#f59e0b';
+      }
+      return;
+    }
+
+    if (el.dashScopeKeyValidationResult) {
+      el.dashScopeKeyValidationResult.textContent = '🔄 正在测试 DashScope 接口与端点连接...';
+      el.dashScopeKeyValidationResult.style.color = '#9ca3af';
+    }
+
+    try {
+      const resp = await apiFetch('/api/verify_key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: key, provider: 'dashscope', base_url: baseUrl }),
+      });
+      const data = await resp.json();
+      if (data.valid) {
+        el.dashScopeKeyValidationResult.textContent = '✅ ' + (data.message || 'DashScope 验证成功！');
+        el.dashScopeKeyValidationResult.style.color = '#10b981';
+      } else {
+        el.dashScopeKeyValidationResult.textContent = '❌ ' + (data.message || 'DashScope 验证失败');
+        el.dashScopeKeyValidationResult.style.color = '#ef4444';
+      }
+    } catch (e) {
+      if (el.dashScopeKeyValidationResult) {
+        el.dashScopeKeyValidationResult.textContent = '❌ 网络连接错误: ' + e.message;
+        el.dashScopeKeyValidationResult.style.color = '#ef4444';
+      }
+    }
+  }
+
+  function handleOpenRouterModelChange(e) {
+    if (e.target.value === 'custom') {
+      if (el.settingOpenRouterCustomModel) {
+        el.settingOpenRouterCustomModel.classList.remove('hidden');
+        el.settingOpenRouterCustomModel.focus();
+      }
+    } else {
+      if (el.settingOpenRouterCustomModel) el.settingOpenRouterCustomModel.classList.add('hidden');
+    }
+  }
+
+  function handleDashScopeModelChange(e) {
+    if (e.target.value === 'custom') {
+      if (el.settingDashScopeCustomModel) {
+        el.settingDashScopeCustomModel.classList.remove('hidden');
+        el.settingDashScopeCustomModel.focus();
+      }
+    } else {
+      if (el.settingDashScopeCustomModel) el.settingDashScopeCustomModel.classList.add('hidden');
     }
   }
 
   async function refreshOpenRouterModels() {
-    if (el.refreshModelsBtn) {
-      el.refreshModelsBtn.textContent = '🔄 同步中...';
-      el.refreshModelsBtn.disabled = true;
+    if (el.refreshOpenRouterModelsBtn) {
+      el.refreshOpenRouterModelsBtn.textContent = '🔄 同步中...';
+      el.refreshOpenRouterModelsBtn.disabled = true;
     }
 
     try {
       const resp = await apiFetch('/api/models/refresh');
       const data = await resp.json();
-      if (data.models && Array.isArray(data.models)) {
-        // Group models by category
-        const groups = {};
-        data.models.forEach((m) => {
-          const cat = m.category || (m.provider === 'openrouter' ? '🌟 OpenRouter 平台' : '☁️ 阿里云百炼平台');
-          if (!groups[cat]) groups[cat] = [];
-          groups[cat].push(m);
+      if (data.models && Array.isArray(data.models) && el.settingOpenRouterModel) {
+        const orModels = data.models.filter((m) => m.provider === 'openrouter' || m.id.startsWith('qwen/'));
+        let html = '<optgroup label="🌟 OpenRouter 平台">';
+        orModels.forEach((m) => {
+          const isSelected = m.id === state.openrouterModel ? 'selected' : '';
+          html += `<option value="${m.id}" ${isSelected}>${m.recommended ? '⚡ ' : ''}${m.name}</option>`;
         });
+        html += '</optgroup><optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
 
-        // Rebuild select HTML
-        let html = '';
-        for (const [catName, models] of Object.entries(groups)) {
-          html += `<optgroup label="${catName}">`;
-          models.forEach((m) => {
-            const isSelected = m.id === state.model ? 'selected' : '';
-            html += `<option value="${m.id}" ${isSelected}>${m.recommended ? '⚡ ' : ''}${m.name}</option>`;
-          });
-          html += '</optgroup>';
-        }
-        html += '<optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
-
-        el.settingModelSelect.innerHTML = html;
-        showToast(`✨ 已成功从 OpenRouter 同步 ${data.count || data.models.length} 个可用模型！`);
+        el.settingOpenRouterModel.innerHTML = html;
+        showToast(`✨ 已成功从 OpenRouter 同步 ${orModels.length} 个可用模型！`);
       }
     } catch (e) {
       console.warn('Failed to refresh models:', e);
       showToast('⚠️ 刷新模型列表失败: ' + e.message);
     } finally {
-      if (el.refreshModelsBtn) {
-        el.refreshModelsBtn.textContent = '🔄 刷新模型';
-        el.refreshModelsBtn.disabled = false;
+      if (el.refreshOpenRouterModelsBtn) {
+        el.refreshOpenRouterModelsBtn.textContent = '🔄 刷新模型';
+        el.refreshOpenRouterModelsBtn.disabled = false;
       }
     }
   }
 
-  function handleModelSelectChange(e) {
-    if (e.target.value === 'custom') {
-      el.settingCustomModel.classList.remove('hidden');
-      el.settingCustomModel.focus();
-    } else {
-      el.settingCustomModel.classList.add('hidden');
-    }
-  }
-
   function saveSettings() {
-    // API Key
-    const keyVal = el.settingApiKey.value.trim();
-    state.apiKey = keyVal;
-    localStorage.setItem('asr_api_key', keyVal);
-    localStorage.setItem('dashscope_api_key', keyVal);
-
-    // Base URL
-    if (el.settingBaseUrl) {
-      const baseUrlVal = el.settingBaseUrl.value.trim();
-      state.baseUrl = baseUrlVal;
-      localStorage.setItem('asr_base_url', baseUrlVal);
+    // 1. OpenRouter
+    if (el.settingOpenRouterApiKey) {
+      state.openrouterApiKey = el.settingOpenRouterApiKey.value.trim();
+      localStorage.setItem('asr_openrouter_api_key', state.openrouterApiKey);
+    }
+    if (el.settingOpenRouterModel) {
+      let orModel = el.settingOpenRouterModel.value;
+      if (orModel === 'custom' && el.settingOpenRouterCustomModel) {
+        orModel = el.settingOpenRouterCustomModel.value.trim() || 'qwen/qwen3-asr-flash-2026-02-10';
+      }
+      state.openrouterModel = orModel;
+      localStorage.setItem('asr_openrouter_model', orModel);
     }
 
-    // Model
-    let selectedModel = el.settingModelSelect.value;
-    if (selectedModel === 'custom') {
-      selectedModel = el.settingCustomModel.value.trim() || 'qwen/qwen3-asr-flash-2026-02-10';
+    // 2. Alibaba DashScope
+    if (el.settingDashScopeApiKey) {
+      state.dashscopeApiKey = el.settingDashScopeApiKey.value.trim();
+      localStorage.setItem('asr_dashscope_api_key', state.dashscopeApiKey);
     }
-    state.model = selectedModel;
-    localStorage.setItem('asr_model', selectedModel);
-    localStorage.setItem('dashscope_model', selectedModel);
+    if (el.settingDashScopeBaseUrl) {
+      state.dashscopeBaseUrl = el.settingDashScopeBaseUrl.value.trim();
+      localStorage.setItem('asr_dashscope_base_url', state.dashscopeBaseUrl);
+    }
+    if (el.settingDashScopeModel) {
+      let dsModel = el.settingDashScopeModel.value;
+      if (dsModel === 'custom' && el.settingDashScopeCustomModel) {
+        dsModel = el.settingDashScopeCustomModel.value.trim() || 'qwen-audio-3.0-asr-flash-filetrans';
+      }
+      state.dashscopeModel = dsModel;
+      localStorage.setItem('asr_dashscope_model', dsModel);
+    }
 
-    // Languages
-    const checkedLangs = [];
-    el.langChipsContainer.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
-      checkedLangs.push(cb.value);
-    });
-    state.languageHints = checkedLangs;
-    localStorage.setItem('asr_lang_hints', JSON.stringify(checkedLangs));
-    localStorage.setItem('dashscope_lang_hints', JSON.stringify(checkedLangs));
+    // Active Provider
+    if (el.radioProviderDashScope && el.radioProviderDashScope.checked) {
+      state.activeProvider = 'dashscope';
+    } else {
+      state.activeProvider = 'openrouter';
+    }
+    localStorage.setItem('asr_active_provider', state.activeProvider);
 
-    // Diarization
-    state.diarization = el.settingDiarization.checked;
-    localStorage.setItem('asr_diarization', state.diarization ? 'true' : 'false');
-    state.speakerCount = el.settingSpeakerCount.value.trim();
-    localStorage.setItem('asr_speaker_count', state.speakerCount);
+    // 3. Preferences
+    if (el.langChipsContainer) {
+      const checkedLangs = [];
+      el.langChipsContainer.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
+        checkedLangs.push(cb.value);
+      });
+      state.languageHints = checkedLangs;
+      localStorage.setItem('asr_lang_hints', JSON.stringify(checkedLangs));
+    }
+    if (el.settingDiarization) {
+      state.diarization = el.settingDiarization.checked;
+      localStorage.setItem('asr_diarization', state.diarization ? 'true' : 'false');
+    }
+    if (el.settingSpeakerCount) {
+      state.speakerCount = el.settingSpeakerCount.value.trim();
+      localStorage.setItem('asr_speaker_count', state.speakerCount);
+    }
+    if (el.settingDisfluency) {
+      state.disfluency = el.settingDisfluency.checked;
+      localStorage.setItem('asr_disfluency', state.disfluency ? 'true' : 'false');
+    }
+    if (el.settingAlignTimestamps) {
+      state.alignTimestamps = el.settingAlignTimestamps.checked;
+      localStorage.setItem('asr_align_timestamps', state.alignTimestamps ? 'true' : 'false');
+    }
+    if (el.settingPrompt) {
+      state.prompt = el.settingPrompt.value.trim();
+      localStorage.setItem('asr_prompt', state.prompt);
+    }
 
-    // Other options
-    state.disfluency = el.settingDisfluency.checked;
-    localStorage.setItem('asr_disfluency', state.disfluency ? 'true' : 'false');
-
-    state.alignTimestamps = el.settingAlignTimestamps.checked;
-    localStorage.setItem('asr_align_timestamps', state.alignTimestamps ? 'true' : 'false');
-
-    state.prompt = el.settingPrompt.value.trim();
-    localStorage.setItem('asr_prompt', state.prompt);
-
+    syncActiveState();
     updateUIHeader();
     closeSettingsModal();
-    showToast('⚙️ 设置已成功保存！');
+    showToast('⚙️ 设置已成功保存并应用！');
   }
 
   function resetSettings() {
-    el.settingApiKey.value = '';
-    if (el.settingBaseUrl) el.settingBaseUrl.value = '';
-    el.settingModelSelect.value = 'qwen/qwen3-asr-flash-2026-02-10';
-    el.settingCustomModel.classList.add('hidden');
-    el.langChipsContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-      cb.checked = cb.value === 'zh';
-    });
-    el.settingDiarization.checked = false;
-    el.speakerCountGroup.classList.add('hidden');
-    el.settingSpeakerCount.value = '';
-    el.settingDisfluency.checked = true;
-    el.settingAlignTimestamps.checked = true;
-    el.settingPrompt.value = '';
+    if (el.settingOpenRouterApiKey) el.settingOpenRouterApiKey.value = '';
+    if (el.settingOpenRouterModel) el.settingOpenRouterModel.value = 'qwen/qwen3-asr-flash-2026-02-10';
+    if (el.settingOpenRouterCustomModel) el.settingOpenRouterCustomModel.classList.add('hidden');
+
+    if (el.settingDashScopeApiKey) el.settingDashScopeApiKey.value = '';
+    if (el.settingDashScopeBaseUrl) el.settingDashScopeBaseUrl.value = '';
+    if (el.settingDashScopeModel) el.settingDashScopeModel.value = 'qwen-audio-3.0-asr-flash-filetrans';
+    if (el.settingDashScopeCustomModel) el.settingDashScopeCustomModel.classList.add('hidden');
+
+    if (el.langChipsContainer) {
+      el.langChipsContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = cb.value === 'zh';
+      });
+    }
+    if (el.settingDiarization) el.settingDiarization.checked = false;
+    if (el.speakerCountGroup) el.speakerCountGroup.classList.add('hidden');
+    if (el.settingSpeakerCount) el.settingSpeakerCount.value = '';
+    if (el.settingDisfluency) el.settingDisfluency.checked = true;
+    if (el.settingAlignTimestamps) el.settingAlignTimestamps.checked = true;
+    if (el.settingPrompt) el.settingPrompt.value = '';
   }
 
   // ==========================================================================
