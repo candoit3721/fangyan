@@ -30,8 +30,8 @@
     baseUrl: '',
     model: 'qwen-audio-3.0-asr-flash-filetrans',
 
-    languageHints: JSON.parse(localStorage.getItem('asr_lang_hints') || localStorage.getItem('dashscope_lang_hints') || '["zh"]'),
-    diarization: localStorage.getItem('asr_diarization') === 'true',
+    languageHints: JSON.parse(localStorage.getItem('asr_lang_hints') || localStorage.getItem('dashscope_lang_hints') || '["zh", "wuu"]'),
+    diarization: localStorage.getItem('asr_diarization') !== 'false',
     speakerCount: localStorage.getItem('asr_speaker_count') || '',
     disfluency: localStorage.getItem('asr_disfluency') !== 'false',
     alignTimestamps: localStorage.getItem('asr_align_timestamps') !== 'false',

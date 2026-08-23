@@ -522,13 +522,13 @@ class ASRService:
     def submit_transcription(
         self,
         file_path: str,
-        model: str = "qwen/qwen3-asr-flash-2026-02-10",
+        model: str = "qwen-audio-3.0-asr-flash-filetrans",
         api_key: Optional[str] = None,
         language_hints: Optional[List[str]] = None,
-        diarization_enabled: bool = False,
+        diarization_enabled: bool = True,
         speaker_count: Optional[int] = None,
-        disfluency_removal_enabled: bool = False,
-        timestamp_alignment_enabled: bool = False,
+        disfluency_removal_enabled: bool = True,
+        timestamp_alignment_enabled: bool = True,
         prompt: Optional[str] = None,
         phrase_id: Optional[str] = None,
         base_url: Optional[str] = None,
@@ -537,6 +537,9 @@ class ASRService:
         """Submit transcription to either OpenRouter or DashScope."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Audio file not found: {file_path}")
+
+        if language_hints is None:
+            language_hints = ["zh", "wuu"]
 
         provider = self.detect_provider(model, api_key)
         key = self.get_api_key(api_key, provider=provider)

@@ -508,7 +508,7 @@
               </label>
               <div class="language-chips" id="langChipsContainer">
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="zh" checked> <span>普通话 (zh)</span></label>
-                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="wuu"> <span>上海话/吴语 (wuu)</span></label>
+                <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="wuu" checked> <span>上海话/吴语 (wuu)</span></label>
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="yue"> <span>粤语 (yue)</span></label>
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="sichuan"> <span>四川话</span></label>
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="en"> <span>英语 (en)</span></label>
@@ -518,7 +518,7 @@
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="tianjin"> <span>天津话</span></label>
                 <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="dongbei"> <span>东北话</span></label>
               </div>
-              <div class="form-hint">支持普通话、上海话/吴语、粤语、四川话等22+方言及多语种；不勾选时模型将自动执行语种与方言检测</div>
+              <div class="form-hint">默认开启普通话与上海话/吴语识别；支持粤语、四川话等22+方言及多语种混合识别</div>
             </div>
 
             <!-- Advanced Toggles Grid -->
@@ -527,15 +527,15 @@
               <div class="form-check-card">
                 <div class="form-check-header">
                   <label class="toggle-switch">
-                    <input type="checkbox" id="settingDiarization">
+                    <input type="checkbox" id="settingDiarization" checked>
                     <span class="toggle-slider"></span>
                   </label>
                   <div class="form-check-labels">
                     <strong>说话人区分 (Diarization)</strong>
-                    <p class="text-muted">自动识别区分不同发言人</p>
+                    <p class="text-muted">自动识别区分不同发言人 (默认开启)</p>
                   </div>
                 </div>
-                <div id="speakerCountGroup" class="form-sub-input hidden">
+                <div id="speakerCountGroup" class="form-sub-input">
                   <label for="settingSpeakerCount" class="text-sm">预期说话人数量 (可选):</label>
                   <input type="number" id="settingSpeakerCount" class="form-input form-input-sm" min="1" max="10" placeholder="自动推断">
                 </div>

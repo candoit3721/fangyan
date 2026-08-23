@@ -571,8 +571,8 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         api_key = raw_key
 
         lang_str = fields.get("language_hints")
-        language_hints = [l.strip() for l in lang_str.split(",") if l.strip()] if lang_str else None
-        diarization_enabled = str(fields.get("diarization_enabled", "false")).lower() in ["true", "1", "yes"]
+        language_hints = [l.strip() for l in lang_str.split(",") if l.strip()] if lang_str else ["zh", "wuu"]
+        diarization_enabled = str(fields.get("diarization_enabled", "true")).lower() in ["true", "1", "yes"]
         speaker_count = fields.get("speaker_count")
         speaker_count = int(speaker_count) if speaker_count and str(speaker_count).isdigit() else None
         disfluency_removal = str(fields.get("disfluency_removal_enabled", "false")).lower() in ["true", "1", "yes"]
