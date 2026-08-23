@@ -412,14 +412,26 @@
 
   function updateUIHeader() {
     syncActiveState();
+    const isOr = state.activeProvider === 'openrouter';
     const hasKey = Boolean(state.apiKey && state.apiKey.length > 3);
-    const shortModel = state.model.split('/').pop().replace('-filetrans', '');
+    const providerName = isOr ? 'OpenRouter' : '阿里云百炼';
+    const providerIcon = isOr ? '🌟' : '☁️';
+
+    // Friendly short model badge (e.g. "3.0 Flash" or "Gemini 3.7")
+    let shortModel = state.model.split('/').pop().replace('-filetrans', '');
+    if (shortModel.startsWith('qwen-audio-3.0-')) shortModel = '3.0 Flash';
+    else if (shortModel.startsWith('gemini-')) shortModel = shortModel.replace('gemini-', 'Gemini ');
+    else if (shortModel.length > 14) shortModel = shortModel.substring(0, 12) + '...';
+
     if (el.setupBtnLabel) {
-      el.setupBtnLabel.textContent = `设置 (${shortModel})`;
+      el.setupBtnLabel.innerHTML = `设置 <span class="header-model-tag" title="当前模型: ${state.model}">${providerIcon} ${shortModel}</span>`;
+    }
+    if (el.openSettingsBtn) {
+      el.openSettingsBtn.title = `【当前引擎与模型】\n平台: ${providerName}\n模型: ${state.model}\n状态: ${hasKey ? 'API Key 已就绪 ✓' : 'API Key 未配置 ✕'}\n\n👉 点击打开系统设置与模型切换`;
     }
     if (el.setupStatusDot) {
       el.setupStatusDot.classList.toggle('active', hasKey);
-      el.setupStatusDot.title = hasKey ? `API Key 已配置 (${state.activeProvider})` : 'API Key 未配置，点击设置';
+      el.setupStatusDot.title = hasKey ? `API Key 已就绪 (${providerName})` : 'API Key 未配置，点击设置';
     }
 
     updateProviderBanners();
