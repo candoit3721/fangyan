@@ -64,19 +64,7 @@
   };
 
   function syncActiveState() {
-    // If activeProvider is explicitly dashscope, or if the current model is a known DashScope model
-    const dsModels = [
-      'qwen-audio-3.0-asr-flash-filetrans',
-      'qwen3-asr-flash-filetrans',
-      'qwen-audio-asr',
-      'sensevoice-v1',
-      'paraformer-v2',
-      'paraformer-8k-v2',
-    ];
-    const isDs = state.activeProvider === 'dashscope' || (state.model && dsModels.some(m => state.model.startsWith(m)));
-
-    if (!isDs) {
-      state.activeProvider = 'openrouter';
+    if (state.activeProvider === 'openrouter') {
       state.apiKey = state.openrouterApiKey;
       state.model = state.openrouterModel || 'qwen/qwen3-asr-flash-2026-02-10';
       state.baseUrl = '';
@@ -204,6 +192,8 @@
     dotAlibaba: document.getElementById('dotAlibaba'),
     bannerCardOpenRouter: document.getElementById('bannerCardOpenRouter'),
     bannerCardAlibaba: document.getElementById('bannerCardAlibaba'),
+    btnToggleOpenRouter: document.getElementById('btnToggleOpenRouter'),
+    btnToggleDashScope: document.getElementById('btnToggleDashScope'),
     radioProviderOpenRouter: document.getElementById('radioProviderOpenRouter'),
     radioProviderDashScope: document.getElementById('radioProviderDashScope'),
     labelProviderOpenRouter: document.getElementById('labelProviderOpenRouter'),
@@ -560,7 +550,33 @@
     if (el.tabBtnAlibaba) el.tabBtnAlibaba.addEventListener('click', () => switchSettingsTab('alibaba'));
     if (el.tabBtnPreferences) el.tabBtnPreferences.addEventListener('click', () => switchSettingsTab('preferences'));
 
-    // Provider Radios
+    // Provider Toggles
+    if (el.btnToggleOpenRouter) {
+      el.btnToggleOpenRouter.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setActiveProvider('openrouter');
+      });
+    }
+    if (el.btnToggleDashScope) {
+      el.btnToggleDashScope.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setActiveProvider('dashscope');
+      });
+    }
+    if (el.bannerCardOpenRouter) {
+      el.bannerCardOpenRouter.addEventListener('click', (e) => {
+        if (!e.target.closest('input') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('a')) {
+          setActiveProvider('openrouter');
+        }
+      });
+    }
+    if (el.bannerCardAlibaba) {
+      el.bannerCardAlibaba.addEventListener('click', (e) => {
+        if (!e.target.closest('input') && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('a')) {
+          setActiveProvider('dashscope');
+        }
+      });
+    }
     if (el.radioProviderOpenRouter) {
       el.radioProviderOpenRouter.addEventListener('change', (e) => {
         if (e.target.checked) setActiveProvider('openrouter');
