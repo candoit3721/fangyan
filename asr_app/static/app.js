@@ -1395,7 +1395,7 @@
       const orKnown = [
         'google/gemini-3.7-flash',
         'google/gemini-3.5-flash',
-        'mistralai/voxtral-small-24b-2507',
+        'xiaomi/mimo-v2.5',
         'openai/gpt-audio-mini',
       ];
       if (orKnown.includes(state.openrouterModel)) {

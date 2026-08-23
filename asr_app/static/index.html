@@ -412,21 +412,22 @@
                 <span>识别模型 (OpenRouter Models)</span>
                 <span>
                   <button type="button" id="refreshOpenRouterModelsBtn" class="btn btn-ghost btn-sm text-xs" title="从 OpenRouter 实时同步最新 Qwen 模型列表">🔄 刷新模型</button>
-                  <a href="https://openrouter.ai/qwen" target="_blank" class="text-link">Qwen 专区 ↗</a>
+                  <a href="https://openrouter.ai/models?modality=audio" target="_blank" class="text-link">音频专区 ↗</a>
                 </span>
               </label>
               <select id="settingOpenRouterModel" class="form-select">
-                <optgroup label="🌟 OpenRouter 原生音频多模态模型">
+                <optgroup label="🌟 OpenRouter 中文多模态语音模型">
                   <option value="google/gemini-3.7-flash" selected>⚡ google/gemini-3.7-flash (极速多模态语音转写 推荐)</option>
-                  <option value="google/gemini-3.5-flash">google/gemini-3.5-flash (高性价比音频转写)</option>
-                  <option value="mistralai/voxtral-small-24b-2507">mistralai/voxtral-small-24b-2507 (Voxtral 24B 语音识别)</option>
+                  <option value="google/gemini-3.5-flash">google/gemini-3.5-flash (Google 高性价比音频转写)</option>
+                  <option value="xiaomi/mimo-v2.5">xiaomi/mimo-v2.5 (小米原生中文多模态语音)</option>
                   <option value="openai/gpt-audio-mini">openai/gpt-audio-mini (OpenAI 原生音频识别)</option>
                 </optgroup>
                 <optgroup label="✏️ 自定义">
                   <option value="custom">✏️ 自定义模型名称...</option>
                 </optgroup>
               </select>
-              <input type="text" id="settingOpenRouterCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID, 如 qwen/qwen3-asr-flash-2026-02-10...">
+              <div class="form-hint text-xs text-muted mt-1">💡 提示: 针对吴语及22+种中文地方方言的高精度识别，建议优先使用【阿里云百炼】专区模型。</div>
+              <input type="text" id="settingOpenRouterCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID...">
               <div id="openRouterDeprecationNotice" class="form-hint text-amber hidden mt-1">⚠️ 该模型存在下线计划或已废弃通知</div>
             </div>
           </div>

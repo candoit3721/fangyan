@@ -84,12 +84,12 @@ AVAILABLE_MODELS = [
         "is_filetrans": False,
     },
     {
-        "id": "mistralai/voxtral-small-24b-2507",
-        "name": "Voxtral Small 24B [OpenRouter]",
+        "id": "xiaomi/mimo-v2.5",
+        "name": "Xiaomi MiMo v2.5 [OpenRouter 中文多模态]",
         "provider": "openrouter",
-        "category": "OpenRouter 语音多模态",
-        "url": "https://openrouter.ai/mistralai/voxtral-small-24b-2507",
-        "description": "Mistral 原生 24B 语音理解与音频转写模型。",
+        "category": "OpenRouter 中文语音多模态",
+        "url": "https://openrouter.ai/xiaomi/mimo-v2.5",
+        "description": "小米官方多模态原生中文音频识别与理解模型。",
         "recommended": False,
         "is_filetrans": False,
     },
@@ -97,7 +97,7 @@ AVAILABLE_MODELS = [
         "id": "openai/gpt-audio-mini",
         "name": "GPT Audio Mini [OpenRouter]",
         "provider": "openrouter",
-        "category": "OpenRouter 语音多模态",
+        "category": "OpenRouter 中文语音多模态",
         "url": "https://openrouter.ai/openai/gpt-audio-mini",
         "description": "OpenAI 官方原生音频多模态识别轻量模型。",
         "recommended": False,
@@ -198,6 +198,20 @@ class ASRService:
                     if not is_audio_input:
                         continue
 
+                    # STRICT CHINESE / DIALECT CAPABILITY FILTER:
+                    # Filter out models with no Chinese capability (such as muse-spark, inkling, voxtral, auto-beta)
+                    # and filter out batch endpoints
+                    if ":batch" in mid:
+                        continue
+
+                    has_chinese_capability = any(vendor in mid.lower() for vendor in [
+                        "google/gemini",
+                        "openai/gpt-audio",
+                        "xiaomi/mimo",
+                    ])
+                    if not has_chinese_capability:
+                        continue
+
                     exp_date = m.get("expiration_date")
                     status_field = m.get("status")
                     is_dep = bool(
@@ -213,9 +227,9 @@ class ASRService:
 
                     model_entry = {
                         "id": mid,
-                        "name": f"{mname} [OpenRouter 原生音频]",
+                        "name": f"{mname} [中文多模态转写]",
                         "provider": "openrouter",
-                        "category": "OpenRouter 语音多模态",
+                        "category": "OpenRouter 中文语音多模态",
                         "modality": modality,
                         "context_length": m.get("context_length"),
                         "pricing": m.get("pricing"),
