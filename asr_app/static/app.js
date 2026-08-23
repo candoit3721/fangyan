@@ -57,9 +57,10 @@
     analyser: null,
     animationFrameId: null,
 
-    // Polling
+    // Polling & Task Lifecycle
     pollInterval: null,
     pollStartTime: 0,
+    transcribeAbortController: null,
   };
 
   function syncActiveState() {
@@ -144,6 +145,7 @@
     progressBarFill: document.getElementById('progressBarFill'),
     progressTaskId: document.getElementById('progressTaskId'),
     progressTimer: document.getElementById('progressTimer'),
+    cancelProcessingBtn: document.getElementById('cancelProcessingBtn'),
 
     // Error
     errorBanner: document.getElementById('errorBanner'),
@@ -487,6 +489,9 @@
     if (el.fileInput) el.fileInput.addEventListener('change', handleFileSelect);
     if (el.removeFileBtn) el.removeFileBtn.addEventListener('click', clearUploadedFile);
     if (el.transcribeUploadedBtn) el.transcribeUploadedBtn.addEventListener('click', () => submitTranscription('upload'));
+
+    // Progress Cancel
+    if (el.cancelProcessingBtn) el.cancelProcessingBtn.addEventListener('click', cancelProcessing);
 
     // Error Close
     if (el.closeErrorBtn) el.closeErrorBtn.addEventListener('click', hideError);
@@ -937,6 +942,12 @@
     // UI Loading State
     showProgressCard(state.model);
 
+    // Abort previous in-flight request if any
+    if (state.transcribeAbortController) {
+      try { state.transcribeAbortController.abort(); } catch (e) {}
+    }
+    state.transcribeAbortController = new AbortController();
+
     try {
       const submitHeaders = {};
       if (state.apiKey && state.apiKey !== 'configured_in_env') {
@@ -950,6 +961,7 @@
         method: 'POST',
         headers: submitHeaders,
         body: formData,
+        signal: state.transcribeAbortController.signal,
       });
 
       const data = await resp.json();
@@ -977,15 +989,33 @@
         startTaskPolling(data.task_id, data.session_id);
       }
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('Transcription submission aborted by user');
+        hideProgressCard();
+        return;
+      }
       console.error('Transcription error:', err);
       hideProgressCard();
       showError(err.message || '提交转写任务失败，请检查网络或 API Key 设置。');
     }
   }
 
+  function cancelProcessing() {
+    if (state.transcribeAbortController) {
+      try {
+        state.transcribeAbortController.abort();
+      } catch (e) {}
+      state.transcribeAbortController = null;
+    }
+    clearInterval(state.pollInterval);
+    state.pollInterval = null;
+    hideProgressCard();
+    showToast('已取消转写处理');
+  }
+
   function showProgressCard(modelName) {
     el.progressTitle.textContent = `正在使用 ${modelName} 处理录音...`;
-    el.progressSubtitle.textContent = '已提交任务至百炼/OpenRouter，正在识别与时间戳对齐...';
+    el.progressSubtitle.textContent = '已提交任务至大模型，正在识别与时间戳对齐...';
     el.progressTaskId.textContent = '正在初始化...';
     el.processingCard.classList.remove('hidden');
     el.resultsSection.classList.add('hidden');
@@ -997,6 +1027,7 @@
   function hideProgressCard() {
     el.processingCard.classList.add('hidden');
     clearInterval(state.pollInterval);
+    state.pollInterval = null;
   }
 
   function updateProgressTimer() {

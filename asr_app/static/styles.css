@@ -596,7 +596,16 @@ body {
 .progress-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.progress-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
 }
 
 .spinner-ring {
