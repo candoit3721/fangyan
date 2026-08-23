@@ -840,13 +840,34 @@ class ASRService:
 
         effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
         dashscope.base_http_api_url = effective_base_url
-        logger.info(f"Submitting DashScope transcription for file: {file_path} with model: {model} (Endpoint: {effective_base_url})")
         dashscope.api_key = api_key
+
+        # 1. Normalize audio format for maximum accuracy (.m4a, .mp3 -> 16kHz mono WAV)
+        target_path = self.normalize_audio(file_path)
+
+        # 2. If it is a local file, upload to DashScope temporary inference OSS
+        if not (target_path.startswith("http://") or target_path.startswith("https://") or target_path.startswith("oss://")):
+            from dashscope.utils.oss_utils import OssUtils
+            logger.info(f"Uploading local audio {target_path} to DashScope inference OSS (model: {model})...")
+            try:
+                oss_url, _ = OssUtils.upload(model=model, file_path=target_path, api_key=api_key)
+                file_urls = [oss_url]
+                headers = extra_kwargs.get("headers", {})
+                headers["X-DashScope-OssResourceResolve"] = "enable"
+                extra_kwargs["headers"] = headers
+                logger.info(f"Local audio uploaded successfully: {oss_url}")
+            except Exception as e:
+                logger.error(f"Failed to upload local audio to DashScope OSS: {e}", exc_info=True)
+                raise RuntimeError(f"音频上传至 DashScope OSS 失败: {str(e)}")
+        else:
+            file_urls = [target_path]
+
+        logger.info(f"Submitting DashScope transcription for file: {file_urls[0]} with model: {model} (Endpoint: {effective_base_url})")
 
         try:
             response = Transcription.async_call(
                 model=model,
-                file_urls=[file_path],
+                file_urls=file_urls,
                 api_key=api_key,
                 **extra_kwargs,
             )
@@ -955,9 +976,13 @@ class ASRService:
             if isinstance(first_res, dict):
                 transcription_url = first_res.get("transcription_url")
                 if first_res.get("subtask_status") == "FAILED":
+                    sub_code = first_res.get("code") or ""
+                    sub_msg = first_res.get("message") or raw_output.get("message") or "Subtask transcription failed"
+                    if "ASR_RESPONSE_HAVE_NO_WORDS" in sub_code or "ASR_RESPONSE_HAVE_NO_WORDS" in sub_msg:
+                        sub_msg = "音频中未检测到清晰人声或语音内容 (ASR_RESPONSE_HAVE_NO_WORDS)"
                     return {
                         "status": "FAILED",
-                        "error_message": first_res.get("message", "Subtask transcription failed"),
+                        "error_message": sub_msg,
                     }
 
         if transcription_url:
