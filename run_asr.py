@@ -39,7 +39,7 @@ def main():
     default_port = int(os.environ.get("PORT", 8765))
     default_host = os.environ.get("HOST", "127.0.0.1")
 
-    parser = argparse.ArgumentParser(description="Start the Qwen3 ASR Flash Web Application.")
+    parser = argparse.ArgumentParser(description="启动 吴语翻译 (Fangyan ASR) Web 应用。")
     parser.add_argument("--port", type=int, default=default_port, help=f"Port to listen on (default: {default_port})")
     parser.add_argument("--host", type=str, default=default_host, help=f"Host address to bind to (default: {default_host})")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser")
@@ -71,7 +71,7 @@ def main():
     url = f"http://{host}:{port}/"
 
     print("=" * 70)
-    print("🎙️  Qwen3 ASR Flash 语音识别与高精转写系统 (OpenRouter & DashScope)")
+    print("🎙️  吴语翻译 - 方言智能语音识别与高精转写系统 (OpenRouter & DashScope)")
     print("=" * 70)
     print(f"🌟 推荐模型: qwen/qwen3-asr-flash-2026-02-10 (OpenRouter)")
     print(f"🔗 本地服务访问地址: {url}")

@@ -1,6 +1,6 @@
-# 🎙️ Qwen3 ASR Flash 语音识别与高精度转写平台
+# 🎙️ 吴语翻译 - 方言智能语音识别与高精度转写平台
 
-基于 **OpenRouter** [`qwen/qwen3-asr-flash-2026-02-10`](https://openrouter.ai/qwen/qwen3-asr-flash-2026-02-10) 与 **阿里云百炼 / DashScope** 官方 `qwen-audio-3.0-asr-flash-filetrans` 模型的本地语音转写与对话分析系统。支持麦克风实时录音采集、音频/视频文件拖拽上传、高精段时间戳对齐、说话人分离（Diarization）、交互式同步试听播放、实时字幕生成与多格式导出。
+基于 **OpenRouter** [`qwen/qwen3-asr-flash-2026-02-10`](https://openrouter.ai/qwen/qwen3-asr-flash-2026-02-10) 与 **阿里云百炼 / DashScope** 官方 `qwen-audio-3.0-asr-flash-filetrans` 模型的方言语音转写与对话分析系统。支持上海话/吴语、粤语、四川话等22+方言及普通话麦克风实时录音、音频/视频文件拖拽上传、高精段时间戳对齐、说话人分离（Diarization）、交互式同步试听播放、实时字幕生成与多格式导出。
 
 ---
 

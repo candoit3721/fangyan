@@ -218,7 +218,7 @@ class TestServerEndpoints(unittest.TestCase):
         with urllib.request.urlopen(req) as resp:
             self.assertEqual(resp.status, 200)
             content = resp.read().decode("utf-8")
-            self.assertIn("Qwen3 ASR Flash", content)
+            self.assertIn("吴语翻译", content)
             self.assertIn("qwen/qwen3-asr-flash-2026-02-10", content)
 
     def test_get_static_assets(self):

@@ -15,7 +15,7 @@ from asr_app.asr_service import ASRService, format_timestamp
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Transcribe audio files using Qwen3 ASR Flash (OpenRouter) or Alibaba Cloud DashScope ASR models."
+        description="吴语翻译 (Fangyan ASR) - Transcribe audio files using OpenRouter or Alibaba Cloud DashScope ASR models."
     )
     parser.add_argument("audio_file", help="Path to local audio or video file")
     parser.add_argument(
