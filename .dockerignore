@@ -1,0 +1,24 @@
+# Git and OS metadata
+.git
+.gitignore
+.DS_Store
+*.swp
+*.swo
+
+# Python cache & virtual environments
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+venv
+env
+
+# Tests and temporary data
+tests
+tmp
+.pytest_cache
+.coverage
+
+# Don't bake local uploads or history into image
+asr_app/data/uploads/*
+!asr_app/data/uploads/.gitkeep

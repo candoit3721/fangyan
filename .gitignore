@@ -1,0 +1,20 @@
+# OS metadata
+.DS_Store
+*.swp
+*.swo
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Runtime and upload data
+asr_app/data/uploads/*
+!asr_app/data/uploads/.gitkeep
+asr_app/data/history.json
+tmp/
+.pytest_cache/
+.coverage

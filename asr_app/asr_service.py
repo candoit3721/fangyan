@@ -1,0 +1,1000 @@
+"""ASR Service Module supporting OpenRouter (qwen/qwen3-asr-flash-2026-02-10)
+and Alibaba Cloud DashScope (qwen-audio-3.0-asr-flash-filetrans).
+"""
+
+import base64
+import json
+import logging
+import os
+import re
+import shutil
+import subprocess
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+import requests
+import dashscope
+from dashscope.audio.asr import Transcription
+
+logger = logging.getLogger(__name__)
+
+# Available preconfigured models
+AVAILABLE_MODELS = [
+    # --- OpenRouter ASR & Multimodal Qwen Models ---
+    {
+        "id": "qwen/qwen3-asr-flash-2026-02-10",
+        "name": "Qwen3 ASR Flash (2026-02-10) [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter ASR (极速语音识别)",
+        "url": "https://openrouter.ai/qwen/qwen3-asr-flash-2026-02-10",
+        "description": "OpenRouter 专属 Qwen3-Omni ASR 语音模型，极速响应，支持11+语言、22+中文方言（含上海话/粤语/四川话）、背景音及戏曲/歌声转写。",
+        "recommended": True,
+        "is_filetrans": True,
+    },
+    {
+        "id": "qwen/qwen3.7-flash",
+        "name": "Qwen 3.7 Flash [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.7 / 3.8",
+        "url": "https://openrouter.ai/qwen/qwen3.7-flash",
+        "description": "阿里最新 Qwen 3.7 高速大模型，支持语音与复杂文本结构化转写。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.7-plus",
+        "name": "Qwen 3.7 Plus [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.7 / 3.8",
+        "url": "https://openrouter.ai/qwen/qwen3.7-plus",
+        "description": "Qwen 3.7 旗舰增强模型，拥有极高理解力与长音频转写归纳能力。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.7-max",
+        "name": "Qwen 3.7 Max [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.7 / 3.8",
+        "url": "https://openrouter.ai/qwen/qwen3.7-max",
+        "description": "Qwen 3.7 最强综合推理能力模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.8-27b",
+        "name": "Qwen 3.8 27B [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.7 / 3.8",
+        "url": "https://openrouter.ai/qwen/qwen3.8-27b",
+        "description": "全新 Qwen 3.8 27B 稠密视觉/多模态模型，支持灵活推理与高精多语言转写。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.8-max",
+        "name": "Qwen 3.8 Max [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.7 / 3.8",
+        "url": "https://openrouter.ai/qwen/qwen3.8-max",
+        "description": "Qwen 3.8 系列顶级超大规模模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.5-flash-02-23",
+        "name": "Qwen 3.5 Flash (02-23) [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.5 系列",
+        "url": "https://openrouter.ai/qwen/qwen3.5-flash-02-23",
+        "description": "Qwen 3.5 高性价比闪电响应模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.5-plus-02-15",
+        "name": "Qwen 3.5 Plus (02-15) [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.5 系列",
+        "url": "https://openrouter.ai/qwen/qwen3.5-plus-02-15",
+        "description": "Qwen 3.5 增强版模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3.5-27b",
+        "name": "Qwen 3.5 27B [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter Qwen 3.5 系列",
+        "url": "https://openrouter.ai/qwen/qwen3.5-27b",
+        "description": "Qwen 3.5 27B 参数高性能通用模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3-vl-32b-instruct",
+        "name": "Qwen 3 VL 32B Instruct [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter 多模态系列",
+        "url": "https://openrouter.ai/qwen/qwen3-vl-32b-instruct",
+        "description": "32B 多模态视觉与音频解析大模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+    {
+        "id": "qwen/qwen3-vl-8b-instruct",
+        "name": "Qwen 3 VL 8B Instruct [OpenRouter]",
+        "provider": "openrouter",
+        "category": "OpenRouter 多模态系列",
+        "url": "https://openrouter.ai/qwen/qwen3-vl-8b-instruct",
+        "description": "轻量级 8B 多模态解析模型。",
+        "recommended": False,
+        "is_filetrans": False,
+    },
+
+    # --- DashScope / Model Studio ASR Models ---
+    {
+        "id": "qwen-audio-3.0-asr-flash-filetrans",
+        "name": "Qwen-Audio 3.0 Flash [DashScope / 阿里云百炼]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "阿里云百炼官方 3.0 Flash 离线长音频转写模型，单文件支持至 12 小时 / 2GB。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+    {
+        "id": "qwen3-asr-flash-filetrans",
+        "name": "Qwen3 ASR Flash [DashScope]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "DashScope 高精度录音文件转写模型。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+    {
+        "id": "qwen-audio-asr",
+        "name": "Qwen Audio ASR (通用) [DashScope]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "通义千问通用音频多模态语音识别模型。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+    {
+        "id": "sensevoice-v1",
+        "name": "SenseVoice-v1 [DashScope]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "极速多语种与富文本语音识别，支持情感与声音事件检测。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+    {
+        "id": "paraformer-v2",
+        "name": "Paraformer-v2 [DashScope]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "通义实验室自研高精度非流式语音识别模型。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+    {
+        "id": "paraformer-8k-v2",
+        "name": "Paraformer 8k v2 (电话客服) [DashScope]",
+        "provider": "dashscope",
+        "category": "阿里云百炼 / DashScope",
+        "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+        "description": "专为 8kHz 电话录音与客服质检优化的识别模型。",
+        "recommended": False,
+        "is_filetrans": True,
+    },
+]
+
+
+def format_timestamp(ms: int, format_type: str = "srt") -> str:
+    """Format milliseconds into human-readable timestamp without floating point rounding errors."""
+    ms = max(0, int(ms))
+    milliseconds = ms % 1000
+    total_seconds = ms // 1000
+    seconds = total_seconds % 60
+    total_minutes = total_seconds // 60
+    minutes = total_minutes % 60
+    hours = total_minutes // 60
+
+    if format_type == "srt":
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+    elif format_type == "display":
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+    elif format_type == "short":
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes:02d}:{seconds:02d}"
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+
+
+class ASRService:
+    def __init__(
+        self,
+        default_dashscope_key: Optional[str] = None,
+        default_openrouter_key: Optional[str] = None,
+    ):
+        self.default_dashscope_key = default_dashscope_key or os.environ.get("DASHSCOPE_API_KEY", "")
+        self.default_openrouter_key = default_openrouter_key or os.environ.get("OPENROUTER_API_KEY", "")
+
+    def get_models(self) -> List[Dict[str, Any]]:
+        """Return available models."""
+        return AVAILABLE_MODELS
+
+    def fetch_openrouter_qwen_models(self) -> List[Dict[str, Any]]:
+        """Dynamically fetch all available Qwen models from OpenRouter."""
+        try:
+            resp = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                headers={"User-Agent": "Qwen-Audio-ASR/1.0"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                models_data = data.get("data", [])
+                qwen_models = [m for m in models_data if "qwen" in m.get("id", "").lower()]
+                logger.info(f"Dynamically fetched {len(qwen_models)} Qwen models from OpenRouter")
+                
+                # Merge into custom model entries if not existing
+                existing_ids = {m["id"] for m in AVAILABLE_MODELS}
+                for qm in qwen_models:
+                    qid = qm.get("id")
+                    if qid not in existing_ids:
+                        name = qm.get("name", qid)
+                        desc = qm.get("description", "OpenRouter Qwen series model")
+                        AVAILABLE_MODELS.insert(len(AVAILABLE_MODELS) - 6, {
+                            "id": qid,
+                            "name": f"{name} [OpenRouter]",
+                            "provider": "openrouter",
+                            "category": "OpenRouter Qwen 系列",
+                            "url": f"https://openrouter.ai/{qid}",
+                            "description": desc[:140] + ("..." if len(desc) > 140 else ""),
+                            "recommended": False,
+                            "is_filetrans": False,
+                        })
+                        existing_ids.add(qid)
+                return AVAILABLE_MODELS
+        except Exception as e:
+            logger.warning(f"Failed to dynamically fetch OpenRouter models: {e}")
+        return AVAILABLE_MODELS
+
+    def detect_provider(self, model: str, api_key: Optional[str] = None) -> str:
+        """Detect whether to route to OpenRouter or DashScope."""
+        model_lower = (model or "").lower().strip()
+        if (
+            model_lower.startswith("qwen/")
+            or "/" in model_lower
+            or "openrouter" in model_lower
+        ):
+            return "openrouter"
+        if api_key and (api_key.startswith("sk-or-") or api_key.startswith("sk-or-v1-")):
+            return "openrouter"
+        return "dashscope"
+
+    def get_api_key(self, provided_key: Optional[str] = None, provider: str = "dashscope") -> str:
+        if provided_key and provided_key.strip():
+            return provided_key.strip()
+        if provider == "openrouter":
+            return os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
+        return os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
+
+    def verify_api_key(self, api_key: str, provider: Optional[str] = None) -> Dict[str, Any]:
+        """Test API key validity for OpenRouter or DashScope."""
+        key = (api_key or "").strip()
+        if not key:
+            return {"valid": False, "message": "API key cannot be empty."}
+
+        if not provider:
+            provider = "openrouter" if key.startswith("sk-or-") else "dashscope"
+
+        if provider == "openrouter":
+            try:
+                resp = requests.get(
+                    "https://openrouter.ai/api/v1/auth/key",
+                    headers={"Authorization": f"Bearer {key}"},
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    label = data.get("data", {}).get("label") or "Active Key"
+                    return {"valid": True, "provider": "openrouter", "message": f"OpenRouter API Key 验证成功 ({label})"}
+                elif resp.status_code == 401:
+                    return {"valid": False, "provider": "openrouter", "message": "OpenRouter 认证失败，请检查 API Key"}
+                else:
+                    return {"valid": False, "provider": "openrouter", "message": f"OpenRouter 响应错误: {resp.status_code}"}
+            except Exception as e:
+                logger.warning(f"OpenRouter key verification network exception: {e}")
+                if key.startswith("sk-or-") and len(key) > 20:
+                    return {"valid": True, "provider": "openrouter", "message": "OpenRouter Key 格式有效 (网络跳过)"}
+                return {"valid": False, "provider": "openrouter", "message": f"验证异常: {str(e)}"}
+        else:
+            try:
+                if len(key) < 10:
+                    return {"valid": False, "provider": "dashscope", "message": "DashScope API Key 格式无效"}
+                resp = requests.get(
+                    "https://dashscope.aliyuncs.com/api/v1/tasks",
+                    headers={"Authorization": f"Bearer {key}"},
+                    params={"page_no": 1, "page_size": 1},
+                    timeout=10,
+                )
+                if resp.status_code in [200, 400, 404]:
+                    return {"valid": True, "provider": "dashscope", "message": "DashScope API Key 验证成功"}
+                elif resp.status_code in [401, 403]:
+                    return {"valid": False, "provider": "dashscope", "message": "DashScope 认证失败，API Key 无效"}
+                else:
+                    return {"valid": True, "provider": "dashscope", "message": "API Key 格式已识别"}
+            except Exception as e:
+                logger.warning(f"DashScope key verification exception: {e}")
+                if key.startswith("sk-") and len(key) >= 20:
+                    return {"valid": True, "provider": "dashscope", "message": "DashScope Key 格式有效"}
+                return {"valid": False, "provider": "dashscope", "message": f"验证异常: {str(e)}"}
+
+    def submit_transcription(
+        self,
+        file_path: str,
+        model: str = "qwen/qwen3-asr-flash-2026-02-10",
+        api_key: Optional[str] = None,
+        language_hints: Optional[List[str]] = None,
+        diarization_enabled: bool = False,
+        speaker_count: Optional[int] = None,
+        disfluency_removal_enabled: bool = False,
+        timestamp_alignment_enabled: bool = False,
+        prompt: Optional[str] = None,
+        phrase_id: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Submit transcription to either OpenRouter or DashScope."""
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Audio file not found: {file_path}")
+
+        provider = self.detect_provider(model, api_key)
+        key = self.get_api_key(api_key, provider=provider)
+
+        if not key:
+            provider_name = "OpenRouter" if provider == "openrouter" else "DashScope"
+            env_var = "OPENROUTER_API_KEY" if provider == "openrouter" else "DASHSCOPE_API_KEY"
+            raise ValueError(f"{provider_name} API Key is required. Please set {env_var} or enter it in settings.")
+
+        abs_path = os.path.abspath(file_path)
+
+        if provider == "openrouter":
+            return self._transcribe_openrouter(
+                file_path=abs_path,
+                model=model,
+                api_key=key,
+                language_hints=language_hints,
+                prompt=prompt,
+            )
+        else:
+            return self._transcribe_dashscope(
+                file_path=abs_path,
+                model=model,
+                api_key=key,
+                language_hints=language_hints,
+                diarization_enabled=diarization_enabled,
+                speaker_count=speaker_count,
+                disfluency_removal_enabled=disfluency_removal,
+                timestamp_alignment_enabled=timestamp_alignment,
+                prompt=prompt,
+                phrase_id=phrase_id,
+                **kwargs,
+            )
+
+    def normalize_audio(self, file_path: str, target_sr: int = 16000) -> str:
+        """
+        Normalize audio/video file (.m4a, .aac, .mp3, .mov, .mp4, .opus, .flac, etc.)
+        to standard 16kHz 16-bit Mono Linear PCM WAV for maximum ASR compatibility.
+        Adheres to Alibaba Cloud Model Studio & OpenRouter ASR specs.
+        """
+        if not os.path.exists(file_path):
+            return file_path
+
+        # If already a 16kHz mono WAV, keep it
+        ext = Path(file_path).suffix.lower()
+        out_wav = f"{file_path}_16k.wav"
+        if os.path.exists(out_wav) and os.path.getsize(out_wav) > 100:
+            return out_wav
+
+        # 1. Try ffmpeg (Linux/Docker/Windows)
+        ffmpeg_bin = shutil.which("ffmpeg")
+        if ffmpeg_bin:
+            try:
+                cmd = [
+                    ffmpeg_bin, "-y",
+                    "-i", file_path,
+                    "-ar", str(target_sr),
+                    "-ac", "1",
+                    "-c:a", "pcm_s16le",
+                    out_wav,
+                ]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                if res.returncode == 0 and os.path.exists(out_wav) and os.path.getsize(out_wav) > 100:
+                    logger.info(f"Normalized audio: {file_path} -> {out_wav} (16kHz Mono WAV via ffmpeg)")
+                    return out_wav
+            except Exception as e:
+                logger.warning(f"ffmpeg conversion failed: {e}")
+
+        # 2. Try afconvert (macOS native built-in)
+        afconvert_bin = shutil.which("afconvert") or ("/usr/bin/afconvert" if os.path.exists("/usr/bin/afconvert") else None)
+        if afconvert_bin:
+            try:
+                cmd = [
+                    afconvert_bin,
+                    file_path,
+                    "-o", out_wav,
+                    "-f", "WAVE",
+                    "-d", f"LEI16@{target_sr}",
+                    "-c", "1",
+                ]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                if res.returncode == 0 and os.path.exists(out_wav) and os.path.getsize(out_wav) > 100:
+                    logger.info(f"Normalized audio: {file_path} -> {out_wav} (16kHz Mono WAV via afconvert)")
+                    return out_wav
+            except Exception as e:
+                logger.warning(f"afconvert conversion failed: {e}")
+
+        return file_path
+
+    # ---------------- OpenRouter Provider ----------------
+
+    def _transcribe_openrouter(
+        self,
+        file_path: str,
+        model: str = "qwen/qwen3-asr-flash-2026-02-10",
+        api_key: str = "",
+        language_hints: Optional[List[str]] = None,
+        prompt: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Transcribe audio file via OpenRouter API (qwen/qwen3-asr-flash-2026-02-10)."""
+        logger.info(f"Submitting OpenRouter transcription for {file_path} with model {model}")
+
+        # Normalize audio (e.g. .m4a, .aac, .mp4 -> 16kHz mono WAV) for optimal ASR accuracy and compatibility
+        target_audio_path = self.normalize_audio(file_path)
+        file_duration_ms = self._get_audio_duration_ms(target_audio_path) or self._get_audio_duration_ms(file_path)
+
+        with open(target_audio_path, "rb") as f:
+            audio_bytes = f.read()
+
+        ext = Path(target_audio_path).suffix.lower().lstrip(".") or "wav"
+        format_map = {
+            "wav": "wav", "mp3": "mp3", "m4a": "wav", "aac": "wav", "flac": "flac",
+            "ogg": "ogg", "oga": "ogg", "opus": "opus", "webm": "webm", "mp4": "wav",
+            "mov": "wav", "mkv": "wav", "amr": "wav", "wma": "wav", "alac": "wav", "caf": "wav",
+        }
+        audio_format = format_map.get(ext, "wav")
+        base64_audio = base64.b64encode(audio_bytes).decode("utf-8")
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:8765",
+            "X-Title": "Qwen-Audio ASR Platform",
+        }
+
+        transcription_res = None
+        task_id = f"or_{int(time.time() * 1000)}_{os.urandom(4).hex()}"
+
+        # Strategy 1: OpenRouter /api/v1/audio/transcriptions (JSON input_audio format)
+        payload: Dict[str, Any] = {
+            "model": model,
+            "input_audio": {
+                "data": base64_audio,
+                "format": "wav" if target_audio_path.endswith(".wav") else audio_format,
+            },
+        }
+        if prompt and prompt.strip():
+            payload["prompt"] = prompt.strip()
+        if language_hints and len(language_hints) > 0 and language_hints[0]:
+            payload["language"] = language_hints[0]
+
+        last_error_msg = ""
+        try:
+            resp = requests.post(
+                "https://openrouter.ai/api/v1/audio/transcriptions",
+                headers=headers,
+                json=payload,
+                timeout=180,
+            )
+            if resp.status_code == 200:
+                transcription_res = resp.json()
+            else:
+                logger.warning(f"OpenRouter audio/transcriptions (JSON) returned {resp.status_code}: {resp.text}")
+                last_error_msg = self._extract_error_message(resp)
+
+                # Strategy 2: Standard multipart/form-data upload
+                try:
+                    with open(target_audio_path, "rb") as f_in:
+                        mime_type = "audio/wav" if target_audio_path.endswith(".wav") else f"audio/{audio_format}"
+                        files = {
+                            "file": (os.path.basename(target_audio_path), f_in, mime_type),
+                        }
+                        data = {
+                            "model": model,
+                        }
+                        if prompt and prompt.strip():
+                            data["prompt"] = prompt.strip()
+                        if language_hints and len(language_hints) > 0 and language_hints[0]:
+                            data["language"] = language_hints[0]
+
+                        multipart_headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "HTTP-Referer": "http://localhost:8765",
+                            "X-Title": "Qwen-Audio ASR Platform",
+                        }
+                        mp_resp = requests.post(
+                            "https://openrouter.ai/api/v1/audio/transcriptions",
+                            headers=multipart_headers,
+                            files=files,
+                            data=data,
+                            timeout=180,
+                        )
+                        if mp_resp.status_code == 200:
+                            transcription_res = mp_resp.json()
+                        else:
+                            logger.warning(f"OpenRouter multipart transcriptions returned {mp_resp.status_code}: {mp_resp.text}")
+                            last_error_msg = self._extract_error_message(mp_resp)
+                except Exception as mp_err:
+                    logger.warning(f"Multipart strategy exception: {mp_err}")
+
+                # Strategy 3: /api/v1/chat/completions fallback for general multimodal models (skip for dedicated ASR models)
+                is_dedicated_asr = any(k in model.lower() for k in ("asr", "whisper", "transcription"))
+                if not transcription_res and not is_dedicated_asr:
+                    chat_payload = {
+                        "model": model,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": (
+                                            "Please accurately transcribe the following audio speech into text with original Chinese and punctuation. Output only the verbatim transcript text."
+                                            + (f"\nVocabulary context: {prompt}" if prompt else "")
+                                        ),
+                                    },
+                                    {
+                                        "type": "input_audio",
+                                        "input_audio": {
+                                            "data": base64_audio,
+                                            "format": "wav" if target_audio_path.endswith(".wav") else audio_format,
+                                        },
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                    chat_resp = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers=headers,
+                        json=chat_payload,
+                        timeout=180,
+                    )
+                    if chat_resp.status_code == 200:
+                        chat_json = chat_resp.json()
+                        content = chat_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        transcription_res = {"text": content}
+                    else:
+                        logger.warning(f"OpenRouter chat/completions fallback returned {chat_resp.status_code}: {chat_resp.text}")
+                        last_error_msg = self._extract_error_message(chat_resp)
+
+                if not transcription_res:
+                    raise RuntimeError(f"OpenRouter API request failed: {last_error_msg or f'HTTP {resp.status_code}'}")
+
+        except Exception as e:
+            if "OpenRouter API request failed" in str(e):
+                raise e
+            logger.error(f"OpenRouter transcription request failed: {e}", exc_info=True)
+            raise RuntimeError(f"OpenRouter ASR error: {str(e)}")
+
+        # Parse normalized output
+        parsed = self.parse_openrouter_result(transcription_res, model=model, fallback_duration_ms=file_duration_ms)
+        parsed["task_id"] = task_id
+        parsed["provider"] = "openrouter"
+        parsed["model"] = model
+        parsed["file_path"] = file_path
+
+        # Cache direct result
+        self._openrouter_cache[task_id] = parsed
+
+        return {
+            "task_id": task_id,
+            "task_status": "SUCCEEDED",
+            "provider": "openrouter",
+            "model": model,
+            "file_path": file_path,
+            "direct_result": parsed,
+        }
+
+    _openrouter_cache: Dict[str, Any] = {}
+
+    def _extract_error_message(self, resp: requests.Response) -> str:
+        """Extract user-friendly error message from API response."""
+        try:
+            data = resp.json()
+            if isinstance(data, dict):
+                err = data.get("error")
+                if isinstance(err, dict):
+                    msg = err.get("message") or err.get("raw") or str(err)
+                    if msg:
+                        return msg
+                elif isinstance(err, str):
+                    return err
+                if "message" in data:
+                    return data["message"]
+        except Exception:
+            pass
+        return resp.text[:300] if resp.text else f"HTTP {resp.status_code}"
+
+    def _get_audio_duration_ms(self, file_path: str) -> int:
+        """Attempt to read duration from audio file without heavy dependencies."""
+        try:
+            ext = Path(file_path).suffix.lower()
+            if ext == ".wav":
+                import wave
+                with wave.open(file_path, "rb") as wf:
+                    frames = wf.getnframes()
+                    rate = wf.getframerate()
+                    if rate > 0:
+                        return int((frames / float(rate)) * 1000)
+        except Exception:
+            pass
+        return 0
+
+    def parse_openrouter_result(
+        self,
+        raw_data: Dict[str, Any],
+        model: str = "",
+        fallback_duration_ms: int = 0,
+    ) -> Dict[str, Any]:
+        """Parse OpenRouter transcription response into normalized sentence structure."""
+        full_text = raw_data.get("text", "").strip()
+        segments = raw_data.get("segments", [])
+        sentences_out: List[Dict[str, Any]] = []
+        total_duration_ms = int(raw_data.get("duration", 0) * 1000) or fallback_duration_ms
+
+        if segments and isinstance(segments, list):
+            for idx, seg in enumerate(segments):
+                start_ms = int(float(seg.get("start", 0)) * 1000)
+                end_ms = int(float(seg.get("end", 0)) * 1000)
+                total_duration_ms = max(total_duration_ms, end_ms)
+                seg_text = seg.get("text", "").strip()
+                if seg_text:
+                    sentences_out.append({
+                        "sentence_id": idx,
+                        "channel_id": 0,
+                        "speaker_id": None,
+                        "speaker_label": "",
+                        "begin_time": start_ms,
+                        "end_time": end_ms,
+                        "begin_time_str": format_timestamp(start_ms, "display"),
+                        "end_time_str": format_timestamp(end_ms, "display"),
+                        "text": seg_text,
+                        "words": seg.get("words", []),
+                    })
+
+        # Fallback if no segments provided: split full text by sentence terminators
+        if not sentences_out and full_text:
+            # Split by punctuation
+            raw_sents = re.split(r'([。！？\n!?;]+)', full_text)
+            chunks = []
+            for i in range(0, len(raw_sents), 2):
+                piece = raw_sents[i]
+                punct = raw_sents[i+1] if i + 1 < len(raw_sents) else ""
+                comb = (piece + punct).strip()
+                if comb:
+                    chunks.append(comb)
+
+            if not chunks:
+                chunks = [full_text]
+
+            chunk_dur = max(2000, total_duration_ms // len(chunks)) if total_duration_ms else 3000
+            for idx, c in enumerate(chunks):
+                begin = idx * chunk_dur
+                end = (idx + 1) * chunk_dur
+                total_duration_ms = max(total_duration_ms, end)
+                sentences_out.append({
+                    "sentence_id": idx,
+                    "channel_id": 0,
+                    "speaker_id": None,
+                    "speaker_label": "",
+                    "begin_time": begin,
+                    "end_time": end,
+                    "begin_time_str": format_timestamp(begin, "display"),
+                    "end_time_str": format_timestamp(end, "display"),
+                    "text": c,
+                    "words": [],
+                })
+
+        return {
+            "status": "SUCCEEDED",
+            "full_text": full_text,
+            "sentences": sentences_out,
+            "duration_ms": total_duration_ms,
+            "duration_str": format_timestamp(total_duration_ms, "short"),
+            "details": raw_data,
+        }
+
+    # ---------------- DashScope Provider ----------------
+
+    def _transcribe_dashscope(
+        self,
+        file_path: str,
+        model: str = "qwen-audio-3.0-asr-flash-filetrans",
+        api_key: str = "",
+        language_hints: Optional[List[str]] = None,
+        diarization_enabled: bool = False,
+        speaker_count: Optional[int] = None,
+        disfluency_removal_enabled: bool = False,
+        timestamp_alignment_enabled: bool = False,
+        prompt: Optional[str] = None,
+        phrase_id: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Submit an asynchronous transcription task to DashScope."""
+        extra_kwargs: Dict[str, Any] = {}
+
+        if language_hints and isinstance(language_hints, list) and len(language_hints) > 0:
+            extra_kwargs["language_hints"] = language_hints
+
+        if diarization_enabled:
+            extra_kwargs["diarization_enabled"] = True
+            if speaker_count and int(speaker_count) > 0:
+                extra_kwargs["speaker_count"] = int(speaker_count)
+
+        if disfluency_removal_enabled:
+            extra_kwargs["disfluency_removal_enabled"] = True
+
+        if timestamp_alignment_enabled:
+            extra_kwargs["timestamp_alignment_enabled"] = True
+
+        if prompt and prompt.strip():
+            extra_kwargs["prompt"] = prompt.strip()
+
+        if phrase_id and phrase_id.strip():
+            extra_kwargs["phrase_id"] = phrase_id.strip()
+
+        for k, v in kwargs.items():
+            if v is not None:
+                extra_kwargs[k] = v
+
+        logger.info(f"Submitting DashScope transcription for file: {file_path} with model: {model}")
+        dashscope.api_key = api_key
+
+        try:
+            response = Transcription.async_call(
+                model=model,
+                file_urls=[file_path],
+                api_key=api_key,
+                **extra_kwargs,
+            )
+        except Exception as e:
+            logger.error(f"Error calling Transcription.async_call: {e}", exc_info=True)
+            raise RuntimeError(f"DashScope API call failed: {str(e)}")
+
+        if response.status_code != 200:
+            err_msg = f"Task submission failed (status {response.status_code}): {response.code} - {response.message}"
+            logger.error(err_msg)
+            raise RuntimeError(err_msg)
+
+        task_id = response.output.get("task_id") if isinstance(response.output, dict) else getattr(response.output, "task_id", None)
+        task_status = response.output.get("task_status", "PENDING") if isinstance(response.output, dict) else getattr(response.output, "task_status", "PENDING")
+
+        return {
+            "task_id": task_id,
+            "task_status": task_status,
+            "provider": "dashscope",
+            "model": model,
+            "file_path": file_path,
+            "submitted_at": time.time(),
+        }
+
+    def fetch_task_status(
+        self,
+        task_id: str,
+        api_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Fetch current status and result of a transcription task."""
+        # Check OpenRouter direct cache first
+        if task_id.startswith("or_") and task_id in self._openrouter_cache:
+            return self._openrouter_cache[task_id]
+
+        key = self.get_api_key(api_key, provider="dashscope")
+        if not key:
+            raise ValueError("DashScope API Key is required.")
+
+        dashscope.api_key = key
+
+        try:
+            response = Transcription.fetch(task=task_id, api_key=key)
+        except Exception as e:
+            logger.error(f"Error fetching task {task_id}: {e}")
+            raise RuntimeError(f"Error checking task status: {str(e)}")
+
+        if response.status_code != 200:
+            return {
+                "task_id": task_id,
+                "status": "FAILED",
+                "code": response.code,
+                "message": response.message,
+            }
+
+        raw_output = response.output if isinstance(response.output, dict) else (response.output.__dict__ if hasattr(response.output, "__dict__") else {})
+        task_status = raw_output.get("task_status", "UNKNOWN")
+
+        result_payload: Dict[str, Any] = {
+            "task_id": task_id,
+            "status": task_status,
+            "raw_output": raw_output,
+        }
+
+        if task_status == "SUCCEEDED":
+            parsed = self.parse_transcription_result(raw_output)
+            result_payload.update(parsed)
+        elif task_status in ["FAILED", "CANCELED"]:
+            result_payload["error_message"] = raw_output.get("message") or response.message or "Transcription task failed."
+
+        return result_payload
+
+    def parse_transcription_result(self, raw_output: Dict[str, Any]) -> Dict[str, Any]:
+        """Download result JSON if transcription_url is present, and normalize transcripts."""
+        results = raw_output.get("results", [])
+        transcription_data = None
+        transcription_url = None
+
+        if results and len(results) > 0:
+            first_res = results[0]
+            if isinstance(first_res, dict):
+                transcription_url = first_res.get("transcription_url")
+                if first_res.get("subtask_status") == "FAILED":
+                    return {
+                        "status": "FAILED",
+                        "error_message": first_res.get("message", "Subtask transcription failed"),
+                    }
+
+        if transcription_url:
+            try:
+                logger.info(f"Fetching transcription result from URL: {transcription_url}")
+                resp = requests.get(transcription_url, timeout=30)
+                if resp.status_code == 200:
+                    transcription_data = resp.json()
+            except Exception as e:
+                logger.error(f"Failed downloading transcription JSON: {e}")
+
+        if not transcription_data:
+            transcription_data = raw_output.get("transcription") or raw_output
+
+        transcripts = transcription_data.get("transcripts", [])
+        sentences_out: List[Dict[str, Any]] = []
+        full_text_parts: List[str] = []
+        total_duration_ms = 0
+
+        if transcripts and isinstance(transcripts, list):
+            for channel_idx, channel in enumerate(transcripts):
+                channel_text = channel.get("text", "")
+                if channel_text:
+                    full_text_parts.append(channel_text)
+
+                channel_sentences = channel.get("sentences", [])
+                for s_idx, s in enumerate(channel_sentences):
+                    begin_time = int(s.get("begin_time", 0))
+                    end_time = int(s.get("end_time", 0))
+                    total_duration_ms = max(total_duration_ms, end_time)
+                    speaker_id = s.get("speaker_id")
+                    speaker_label = f"Speaker {speaker_id}" if speaker_id is not None else f"Channel {channel_idx + 1}" if len(transcripts) > 1 else ""
+
+                    sentence_obj = {
+                        "sentence_id": len(sentences_out),
+                        "channel_id": channel_idx,
+                        "speaker_id": speaker_id,
+                        "speaker_label": speaker_label,
+                        "begin_time": begin_time,
+                        "end_time": end_time,
+                        "begin_time_str": format_timestamp(begin_time, "display"),
+                        "end_time_str": format_timestamp(end_time, "display"),
+                        "text": s.get("text", "").strip(),
+                        "words": s.get("words", []),
+                    }
+                    sentences_out.append(sentence_obj)
+
+        elif "sentences" in transcription_data:
+            for s_idx, s in enumerate(transcription_data.get("sentences", [])):
+                begin_time = int(s.get("begin_time", 0))
+                end_time = int(s.get("end_time", 0))
+                total_duration_ms = max(total_duration_ms, end_time)
+                speaker_id = s.get("speaker_id")
+                speaker_label = f"Speaker {speaker_id}" if speaker_id is not None else ""
+
+                sentence_obj = {
+                    "sentence_id": s_idx,
+                    "channel_id": 0,
+                    "speaker_id": speaker_id,
+                    "speaker_label": speaker_label,
+                    "begin_time": begin_time,
+                    "end_time": end_time,
+                    "begin_time_str": format_timestamp(begin_time, "display"),
+                    "end_time_str": format_timestamp(end_time, "display"),
+                    "text": s.get("text", "").strip(),
+                    "words": s.get("words", []),
+                }
+                sentences_out.append(sentence_obj)
+            full_text_parts.append(transcription_data.get("text", ""))
+
+        elif "text" in transcription_data:
+            full_text_parts.append(transcription_data.get("text", ""))
+
+        full_text = "\n\n".join([p for p in full_text_parts if p.strip()])
+        if not full_text and sentences_out:
+            full_text = "".join([s["text"] for s in sentences_out])
+
+        return {
+            "status": "SUCCEEDED",
+            "full_text": full_text,
+            "sentences": sentences_out,
+            "duration_ms": total_duration_ms,
+            "duration_str": format_timestamp(total_duration_ms, "short"),
+            "transcription_url": transcription_url,
+            "details": transcription_data,
+        }
+
+    @staticmethod
+    def generate_srt(sentences: List[Dict[str, Any]]) -> str:
+        """Generate SubRip Subtitle (.srt) format."""
+        srt_lines = []
+        for idx, s in enumerate(sentences, start=1):
+            begin_str = format_timestamp(s.get("begin_time", 0), "srt")
+            end_str = format_timestamp(s.get("end_time", 0), "srt")
+            text = s.get("text", "")
+            speaker = s.get("speaker_label")
+            if speaker:
+                text = f"[{speaker}] {text}"
+            srt_lines.append(f"{idx}\n{begin_str} --> {end_str}\n{text}\n")
+        return "\n".join(srt_lines)
+
+    @staticmethod
+    def generate_markdown(
+        full_text: str,
+        sentences: List[Dict[str, Any]],
+        model_name: str = "",
+        duration_str: str = "",
+    ) -> str:
+        """Generate formatted Markdown export."""
+        lines = [
+            "# Audio Transcription",
+            "",
+            f"- **Model**: `{model_name}`" if model_name else "",
+            f"- **Duration**: {duration_str}" if duration_str else "",
+            f"- **Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "## Full Transcript",
+            "",
+            full_text if full_text else "_No text content_",
+            "",
+            "---",
+            "",
+            "## Timestamped Dialogue",
+            "",
+        ]
+
+        lines = [l for l in lines if l != ""]
+
+        for s in sentences:
+            time_tag = f"`[{s.get('begin_time_str')} -> {s.get('end_time_str')}]`"
+            speaker = f"**{s.get('speaker_label')}**: " if s.get("speaker_label") else ""
+            lines.append(f"- {time_tag} {speaker}{s.get('text', '')}")
+
+        return "\n".join(lines)
+
+
+# Singleton instance
+asr_service = ASRService()

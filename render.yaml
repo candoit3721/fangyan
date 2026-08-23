@@ -1,0 +1,24 @@
+# ==============================================================================
+# Render Infrastructure as Code Blueprint (render.yaml)
+# Deploy Qwen3 ASR Flash to Render with 1-click
+# ==============================================================================
+
+services:
+  - type: web
+    name: qwen3-asr-flash
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+        # Enter your OpenRouter API Key in Render Dashboard (e.g. sk-or-v1-...)
+      - key: APP_PASSCODE
+        sync: false
+        # Enter your Access Passcode / Token ID for secure access protection
+      - key: DASHSCOPE_API_KEY
+        sync: false
+        # Optional: DashScope API Key for native Alibaba Cloud models
+      - key: PYTHONUNBUFFERED
+        value: "1"

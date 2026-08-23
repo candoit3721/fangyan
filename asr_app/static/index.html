@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qwen-Audio ASR 语音识别与转写平台 | Alibaba Cloud DashScope</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-badge">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+            <line x1="8" y1="22" x2="16" y2="22"></line>
+          </svg>
+        </div>
+        <div class="header-title-group">
+          <h1>Qwen3 ASR Flash <span class="badge badge-gradient">OpenRouter & DashScope</span></h1>
+          <p class="header-subtitle">支持 Qwen3-ASR-Flash (2026-02-10) 与 阿里云百炼智能语音高精转写</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- History Drawer Button -->
+        <button id="toggleHistoryBtn" class="btn btn-ghost" title="查看转写历史记录">
+          <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <polyline points="12 7 12 12 15 15"></polyline>
+          </svg>
+          <span>历史记录</span>
+        </button>
+
+        <!-- Unified Setup Menu Button -->
+        <button id="openSettingsBtn" class="btn btn-secondary" title="系统与 ASR 参数配置">
+          <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span id="setupBtnLabel">设置 / Setup</span>
+          <span id="setupStatusDot" class="status-dot-badge" title="配置状态"></span>
+        </button>
+
+        <!-- Lock / Logout Button (shown when passcode auth is active) -->
+        <button id="lockAppBtn" class="btn btn-ghost hidden" title="锁定并退出当前会话">
+          <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>锁定</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-main">
+      <!-- Input Panel: Dual Mode (Record vs Upload) -->
+      <section class="card input-card">
+        <div class="tabs-header">
+          <button id="tabRecordBtn" class="tab-btn active">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+              <line x1="8" y1="22" x2="16" y2="22"></line>
+            </svg>
+            <span>实时录音 (Microphone)</span>
+          </button>
+          <button id="tabUploadBtn" class="tab-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>文件上传 (Audio/Video File)</span>
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <!-- TAB 1: Live Audio Recording -->
+          <div id="recordPanel" class="tab-pane active">
+            <div class="recorder-container">
+              <!-- Waveform Visualizer Canvas -->
+              <div class="visualizer-wrapper">
+                <canvas id="visualizerCanvas" width="800" height="120"></canvas>
+                <div id="recordingTimer" class="recording-timer">00:00.00</div>
+              </div>
+
+              <!-- Recorder Action Controls -->
+              <div class="recorder-controls">
+                <button id="startRecordBtn" class="record-circle-btn" title="点击开始录音">
+                  <div class="record-icon-inner">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                  </div>
+                </button>
+
+                <div id="recordingActiveActions" class="active-actions hidden">
+                  <button id="pauseRecordBtn" class="btn btn-icon btn-secondary" title="暂停/恢复录音">
+                    <svg id="pauseIcon" class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="6" y="4" width="4" height="16"></rect>
+                      <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                  </button>
+                  <button id="stopRecordBtn" class="btn btn-danger btn-pill" title="完成录音并预览">
+                    <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                    <span>停止并预览</span>
+                  </button>
+                  <button id="cancelRecordBtn" class="btn btn-ghost" title="取消重录">取消</button>
+                </div>
+              </div>
+
+              <div id="recordingStatusHint" class="status-hint">点击麦克风按钮开始清晰捕捉您的语音</div>
+
+              <!-- Recorded Audio Preview -->
+              <div id="recordedPreviewCard" class="audio-preview-box hidden">
+                <div class="preview-header">
+                  <span class="preview-tag">🎙️ 录音完成</span>
+                  <span id="recordedDurationTag" class="duration-tag">00:00</span>
+                </div>
+                <audio id="recordedAudioPlayer" controls class="custom-audio-elem"></audio>
+                <div class="preview-actions">
+                  <button id="transcribeRecordedBtn" class="btn btn-primary btn-lg">
+                    <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>开始智能转写</span>
+                  </button>
+                  <button id="reRecordBtn" class="btn btn-secondary">重新录制</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: Audio/Video File Upload -->
+          <div id="uploadPanel" class="tab-pane">
+            <div id="dropZone" class="drop-zone">
+              <input type="file" id="fileInput" class="file-input-hidden" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.webm,.mp4,.mov,.mkv">
+              <div class="drop-zone-content">
+                <div class="upload-icon-circle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <h3>拖拽音频/视频文件到此处，或 <span class="highlight-link">点击浏览选择</span></h3>
+                <p class="drop-hint">支持超长录音与大文件转写 (MP3, WAV, M4A, AAC, FLAC, OGG, WebM, MP4)</p>
+                <div class="format-chips">
+                  <span class="chip">MP3</span>
+                  <span class="chip">WAV</span>
+                  <span class="chip">M4A</span>
+                  <span class="chip">AAC</span>
+                  <span class="chip">FLAC</span>
+                  <span class="chip">WebM</span>
+                  <span class="chip">MP4/MOV</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Uploaded File Preview Card -->
+            <div id="uploadedFileCard" class="audio-preview-box hidden">
+              <div class="preview-header">
+                <div class="file-info-col">
+                  <span id="uploadedFileName" class="file-name font-mono">audio_sample.mp3</span>
+                  <span id="uploadedFileSize" class="file-size">3.4 MB</span>
+                </div>
+                <button id="removeFileBtn" class="btn-icon btn-ghost" title="移除文件">✕</button>
+              </div>
+              <audio id="uploadedAudioPlayer" controls class="custom-audio-elem"></audio>
+              <div class="preview-actions">
+                <button id="transcribeUploadedBtn" class="btn btn-primary btn-lg">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>开始智能转写</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Processing Progress Overlay / Banner -->
+      <section id="processingCard" class="card progress-card hidden">
+        <div class="progress-header">
+          <div class="spinner-ring"></div>
+          <div>
+            <h3 id="progressTitle">正在使用 Qwen-Audio 3.0 Flash 处理录音...</h3>
+            <p id="progressSubtitle" class="text-muted">已提交任务至阿里云百炼，正在异步识别与时间戳对齐...</p>
+          </div>
+        </div>
+        <div class="progress-bar-track">
+          <div id="progressBarFill" class="progress-bar-fill animate-indeterminate"></div>
+        </div>
+        <div class="progress-meta">
+          <span>Task ID: <code id="progressTaskId" class="font-mono">-</code></span>
+          <span id="progressTimer">耗时: 0s</span>
+        </div>
+      </section>
+
+      <!-- Error Banner -->
+      <div id="errorBanner" class="alert alert-error hidden">
+        <svg class="icon-md alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div class="alert-content">
+          <div class="alert-title">转写发生错误</div>
+          <div id="errorMessage" class="alert-desc">无法连接至 DashScope API</div>
+        </div>
+        <button id="closeErrorBtn" class="alert-close">✕</button>
+      </div>
+
+      <!-- Results Workspace Section -->
+      <section id="resultsSection" class="results-section hidden">
+        <!-- Persistent Synchronized Audio Player Bar -->
+        <div class="card audio-sync-card">
+          <div class="sync-player-left">
+            <button id="playerPlayBtn" class="player-btn-circle" title="播放 / 暂停">
+              <svg id="playerPlayIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <svg id="playerPauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            </button>
+            <div class="player-times">
+              <span id="playerCurrentTime" class="font-mono">00:00</span> / <span id="playerTotalTime" class="font-mono text-muted">00:00</span>
+            </div>
+          </div>
+
+          <div class="sync-player-center">
+            <input type="range" id="playerScrubber" min="0" max="100" value="0" step="0.1" class="player-seek-range">
+            <div id="nowPlayingSentence" class="now-playing-text">点击下方任意句子可快速同步跳转播放</div>
+          </div>
+
+          <div class="sync-player-right">
+            <select id="playbackSpeedSelect" class="speed-select" title="播放倍速">
+              <option value="0.75">0.75x</option>
+              <option value="1.0" selected>1.0x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2.0">2.0x</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Transcript Details Card -->
+        <div class="card transcript-card">
+          <!-- Toolbar & View Switcher -->
+          <div class="transcript-toolbar">
+            <div class="toolbar-left">
+              <div class="view-tabs">
+                <button id="viewDialogueBtn" class="view-tab-btn active">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  <span>时间戳对话视图</span>
+                </button>
+                <button id="viewDocumentBtn" class="view-tab-btn">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <span>全文阅读视图</span>
+                </button>
+                <button id="viewSrtBtn" class="view-tab-btn">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M10 8v8l6-4-6-4z"></path></svg>
+                  <span>字幕 (SRT)</span>
+                </button>
+                <button id="viewJsonBtn" class="view-tab-btn">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span>JSON 数据</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search & Actions -->
+            <div class="toolbar-right">
+              <div class="search-box">
+                <svg class="icon-sm search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="transcriptSearchInput" placeholder="在识别文本中搜索..." class="search-input">
+              </div>
+
+              <!-- Export Dropdown -->
+              <div class="dropdown">
+                <button id="exportDropdownBtn" class="btn btn-secondary">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>导出结果</span>
+                </button>
+                <div id="exportMenu" class="dropdown-menu hidden">
+                  <button class="dropdown-item" data-export="txt">📄 纯文本 (.txt)</button>
+                  <button class="dropdown-item" data-export="md">📝 Markdown 带时间戳 (.md)</button>
+                  <button class="dropdown-item" data-export="srt">🎬 SubRip 字幕文件 (.srt)</button>
+                  <button class="dropdown-item" data-export="json">📦 完整结构化数据 (.json)</button>
+                  <div class="dropdown-divider"></div>
+                  <button id="copyAllTextBtn" class="dropdown-item">📋 一键复制全文</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metadata Summary Strip -->
+          <div class="meta-strip">
+            <div class="meta-item"><span class="text-muted">模型:</span> <strong id="metaModelName">qwen-audio-3.0-asr-flash-filetrans</strong></div>
+            <div class="meta-item"><span class="text-muted">音频时长:</span> <strong id="metaDuration">00:00</strong></div>
+            <div class="meta-item"><span class="text-muted">总句数:</span> <strong id="metaSentenceCount">0</strong> 句</div>
+            <div class="meta-item"><span class="text-muted">总字数:</span> <strong id="metaCharCount">0</strong> 字</div>
+          </div>
+
+          <!-- Tab Content 1: Dialogue List with Click-to-Play -->
+          <div id="dialogueViewPane" class="transcript-pane active">
+            <div id="sentenceList" class="sentence-list">
+              <!-- Dynamically populated sentence cards -->
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Document View -->
+          <div id="documentViewPane" class="transcript-pane hidden">
+            <div class="document-container">
+              <div id="fullDocumentText" class="document-text"></div>
+            </div>
+          </div>
+
+          <!-- Tab Content 3: SRT Subtitles -->
+          <div id="srtViewPane" class="transcript-pane hidden">
+            <pre id="srtCodeBlock" class="code-viewer font-mono"></pre>
+          </div>
+
+          <!-- Tab Content 4: JSON Raw Output -->
+          <div id="jsonViewPane" class="transcript-pane hidden">
+            <pre id="jsonCodeBlock" class="code-viewer font-mono"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Settings Modal Drawer -->
+    <div id="settingsModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h2>⚙️ ASR 模型与识别参数配置</h2>
+            <p class="text-muted">基于阿里云百炼 / DashScope 官方接口规范</p>
+          </div>
+          <button id="closeSettingsBtn" class="modal-close-btn">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- API Key Section -->
+          <div class="form-group">
+            <label class="form-label" for="settingApiKey">
+              <span id="apiKeyLabelText">API Key (OpenRouter 或 DashScope)</span>
+              <span id="apiKeyLinkContainer">
+                <a href="https://openrouter.ai/keys" target="_blank" class="text-link">获取 OpenRouter Key ↗</a>
+                <span class="text-muted"> | </span>
+                <a href="https://bailian.console.aliyun.com/?apiKey=1" target="_blank" class="text-link">获取 DashScope Key ↗</a>
+              </span>
+            </label>
+            <div class="input-with-action">
+              <input type="password" id="settingApiKey" class="form-input font-mono" placeholder="sk-or-v1-... (OpenRouter) 或 sk-... (DashScope)">
+              <button type="button" id="toggleKeyVisibilityBtn" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
+              <button type="button" id="testKeyBtn" class="btn btn-secondary btn-sm">测试连接</button>
+            </div>
+            <div id="keyValidationResult" class="form-hint">支持在浏览器本地保存，或配置系统环境变量 <code>OPENROUTER_API_KEY</code> / <code>DASHSCOPE_API_KEY</code></div>
+          </div>
+
+          <!-- Model Selection -->
+          <div class="form-group">
+            <label class="form-label" for="settingModelSelect">
+              <span>识别模型 (Model)</span>
+              <span id="modelDocLinkContainer">
+                <button type="button" id="refreshModelsBtn" class="btn btn-ghost btn-sm text-xs" title="从 OpenRouter 实时同步最新 Qwen 模型列表">🔄 刷新模型</button>
+                <a href="https://openrouter.ai/qwen" target="_blank" class="text-link">OpenRouter Qwen 专区 ↗</a>
+              </span>
+            </label>
+            <select id="settingModelSelect" class="form-select">
+              <optgroup label="🌟 OpenRouter 语音识别 (ASR 极速)">
+                <option value="qwen/qwen3-asr-flash-2026-02-10" selected>⚡ qwen/qwen3-asr-flash-2026-02-10 (2026-02-10 最新极速 ASR)</option>
+              </optgroup>
+              <optgroup label="🧠 OpenRouter Qwen 3.7 / 3.8 旗舰系列">
+                <option value="qwen/qwen3.7-flash">qwen/qwen3.7-flash (Qwen 3.7 闪电高速)</option>
+                <option value="qwen/qwen3.7-plus">qwen/qwen3.7-plus (Qwen 3.7 旗舰增强)</option>
+                <option value="qwen/qwen3.7-max">qwen/qwen3.7-max (Qwen 3.7 顶级推理)</option>
+                <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Qwen 3.8 27B 稠密视觉/多模态)</option>
+                <option value="qwen/qwen3.8-max">qwen/qwen3.8-max (Qwen 3.8 Max 超大规模)</option>
+              </optgroup>
+              <optgroup label="⚡ OpenRouter Qwen 3.5 常用系列">
+                <option value="qwen/qwen3.5-flash-02-23">qwen/qwen3.5-flash-02-23 (Qwen 3.5 高性价比)</option>
+                <option value="qwen/qwen3.5-plus-02-15">qwen/qwen3.5-plus-02-15 (Qwen 3.5 Plus)</option>
+                <option value="qwen/qwen3.5-27b">qwen/qwen3.5-27b (Qwen 3.5 27B)</option>
+              </optgroup>
+              <optgroup label="👁️ OpenRouter 多模态视觉/音频系列">
+                <option value="qwen/qwen3-vl-32b-instruct">qwen/qwen3-vl-32b-instruct (32B 多模态)</option>
+                <option value="qwen/qwen3-vl-8b-instruct">qwen/qwen3-vl-8b-instruct (8B 多模态轻量)</option>
+              </optgroup>
+              <optgroup label="☁️ 阿里云百炼 / DashScope 平台">
+                <option value="qwen-audio-3.0-asr-flash-filetrans">qwen-audio-3.0-asr-flash-filetrans (3.0 Flash 离线长录音转写)</option>
+                <option value="qwen3-asr-flash-filetrans">qwen3-asr-flash-filetrans (Qwen3 Flash 录音文件转写)</option>
+                <option value="qwen-audio-asr">qwen-audio-asr (通用音频多模态识别)</option>
+                <option value="sensevoice-v1">sensevoice-v1 (多语种 / 富文本语音识别)</option>
+                <option value="paraformer-v2">paraformer-v2 (通义非实时语音识别)</option>
+                <option value="paraformer-8k-v2">paraformer-8k-v2 (8k 电话客服录音)</option>
+              </optgroup>
+              <optgroup label="✏️ 自定义">
+                <option value="custom">✏️ 自定义模型名称...</option>
+              </optgroup>
+            </select>
+            <input type="text" id="settingCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID, 如 qwen/qwen3-asr-flash-2026-02-10...">
+          </div>
+
+          <!-- Language Hints -->
+          <div class="form-group">
+            <label class="form-label">
+              <span>语言识别偏好 (Language Hints)</span>
+              <span class="badge badge-sm">最多4种</span>
+            </label>
+            <div class="language-chips" id="langChipsContainer">
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="zh" checked> <span>普通话 (zh)</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="wuu"> <span>上海话/吴语 (wuu)</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="yue"> <span>粤语 (yue)</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="sichuan"> <span>四川话</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="en"> <span>英语 (en)</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ja"> <span>日语 (ja)</span></label>
+              <label class="chip-checkbox"><input type="checkbox" name="lang_hint" value="ko"> <span>韩语 (ko)</span></label>
+            </div>
+            <div class="form-hint">支持普通话、上海话/吴语、粤语、四川话等22+方言及多语种；不勾选时模型将自动执行语种与方言检测</div>
+          </div>
+
+          <!-- Advanced Toggles Grid -->
+          <div class="form-grid-2">
+            <!-- Speaker Diarization -->
+            <div class="form-check-card">
+              <div class="form-check-header">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingDiarization">
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="form-check-labels">
+                  <strong>说话人区分 (Diarization)</strong>
+                  <p class="text-muted">自动识别区分不同发言人</p>
+                </div>
+              </div>
+              <div id="speakerCountGroup" class="form-sub-input hidden">
+                <label for="settingSpeakerCount" class="text-sm">预期说话人数量 (可选):</label>
+                <input type="number" id="settingSpeakerCount" class="form-input form-input-sm" min="1" max="10" placeholder="自动推断">
+              </div>
+            </div>
+
+            <!-- Disfluency Removal -->
+            <div class="form-check-card">
+              <div class="form-check-header">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingDisfluency" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="form-check-labels">
+                  <strong>语气词过滤 (Disfluency)</strong>
+                  <p class="text-muted">过滤口语停顿词 (如"嗯","啊")</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timestamp Alignment -->
+            <div class="form-check-card">
+              <div class="form-check-header">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settingAlignTimestamps" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <div class="form-check-labels">
+                  <strong>高精度时间戳校准</strong>
+                  <p class="text-muted">校准字级与句级起止毫秒</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prompt / Vocabulary Context -->
+          <div class="form-group mt-3">
+            <label class="form-label" for="settingPrompt">
+              <span>热词与领域上下文 (Prompt / Context)</span>
+              <span class="text-muted text-xs">提升专有名词准确率</span>
+            </label>
+            <textarea id="settingPrompt" class="form-textarea" rows="2" placeholder="输入行业术语、人名、产品名或背景信息，例如: 阿里巴巴, Qwen-Audio, 通义千问, 模型工作室, ASR"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="resetSettingsBtn" class="btn btn-ghost">恢复默认</button>
+          <button type="button" id="saveSettingsBtn" class="btn btn-primary">保存配置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Drawer Sidebar -->
+    <div id="historyDrawer" class="drawer-overlay hidden">
+      <div class="drawer-panel">
+        <div class="drawer-header">
+          <h3>🕒 转写历史记录</h3>
+          <button id="closeHistoryBtn" class="btn-icon btn-ghost">✕</button>
+        </div>
+        <div class="drawer-body">
+          <div id="historyList" class="history-list">
+            <!-- Dynamically injected history cards -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden audio element for synchronized playback controller -->
+    <audio id="globalSyncAudio"></audio>
+
+    <!-- Global Toast Notification -->
+    <div id="toastNotification" class="toast hidden"></div>
+
+    <!-- Login Passcode Gate Modal -->
+    <div id="loginModal" class="modal-overlay hidden">
+      <div class="modal-card login-modal-card">
+        <div class="login-icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div class="login-title-group">
+          <h2>系统访问验证</h2>
+          <p>请输入访问密钥 (Passcode / Token ID) 解锁使用系统</p>
+        </div>
+        <form id="loginForm" class="login-form" onsubmit="return false;">
+          <div class="input-with-action">
+            <input type="password" id="loginPasscodeInput" class="form-input font-mono" placeholder="输入访问 Passcode..." autocomplete="current-password" autofocus>
+            <button type="button" id="toggleLoginPasscodeVisibility" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
+          </div>
+          <div id="loginErrorMsg" class="login-error-hint hidden"></div>
+          <button type="submit" id="submitLoginBtn" class="btn btn-primary btn-lg" style="width: 100%;">
+            <span>解锁进入 / Unlock</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
