@@ -207,6 +207,7 @@
     settingOpenRouterModel: document.getElementById('settingOpenRouterModel'),
     refreshOpenRouterModelsBtn: document.getElementById('refreshOpenRouterModelsBtn'),
     settingOpenRouterCustomModel: document.getElementById('settingOpenRouterCustomModel'),
+    openRouterDeprecationNotice: document.getElementById('openRouterDeprecationNotice'),
 
     // Alibaba Cloud DashScope Settings
     settingDashScopeApiKey: document.getElementById('settingDashScopeApiKey'),
@@ -215,7 +216,9 @@
     dashScopeKeyValidationResult: document.getElementById('dashScopeKeyValidationResult'),
     settingDashScopeBaseUrl: document.getElementById('settingDashScopeBaseUrl'),
     settingDashScopeModel: document.getElementById('settingDashScopeModel'),
+    refreshDashScopeModelsBtn: document.getElementById('refreshDashScopeModelsBtn'),
     settingDashScopeCustomModel: document.getElementById('settingDashScopeCustomModel'),
+    dashScopeDeprecationNotice: document.getElementById('dashScopeDeprecationNotice'),
 
     // Preferences Settings
     langChipsContainer: document.getElementById('langChipsContainer'),
@@ -597,6 +600,7 @@
     // DashScope Key & Model
     if (el.toggleDashScopeKeyVisibilityBtn) el.toggleDashScopeKeyVisibilityBtn.addEventListener('click', toggleDashScopeKeyVisibility);
     if (el.testDashScopeKeyBtn) el.testDashScopeKeyBtn.addEventListener('click', testDashScopeKey);
+    if (el.refreshDashScopeModelsBtn) el.refreshDashScopeModelsBtn.addEventListener('click', refreshDashScopeModels);
     if (el.settingDashScopeModel) el.settingDashScopeModel.addEventListener('change', handleDashScopeModelChange);
 
     // Preferences & Toggles
@@ -1604,27 +1608,84 @@
     }
 
     try {
-      const resp = await apiFetch('/api/models/refresh');
+      const params = new URLSearchParams();
+      if (state.openrouterApiKey) params.set('openrouter_key', state.openrouterApiKey);
+      const resp = await apiFetch(`/api/models?${params.toString()}`);
       const data = await resp.json();
-      if (data.models && Array.isArray(data.models) && el.settingOpenRouterModel) {
-        const orModels = data.models.filter((m) => m.provider === 'openrouter' || m.id.startsWith('qwen/'));
-        let html = '<optgroup label="🌟 OpenRouter 平台">';
+      const orModels = data.openrouter?.models || (data.models ? data.models.filter((m) => m.provider === 'openrouter') : []);
+      if (orModels.length > 0 && el.settingOpenRouterModel) {
+        let html = '<optgroup label="🌟 OpenRouter 语音与多模态模型">';
         orModels.forEach((m) => {
           const isSelected = m.id === state.openrouterModel ? 'selected' : '';
-          html += `<option value="${m.id}" ${isSelected}>${m.recommended ? '⚡ ' : ''}${m.name}</option>`;
+          const badge = m.recommended ? '⚡ ' : (m.is_deprecated ? '⚠️ ' : '');
+          const depText = m.is_deprecated ? ` (${m.deprecation_notice || '已下线'})` : '';
+          html += `<option value="${m.id}" ${isSelected}>${badge}${m.name}${depText}</option>`;
         });
         html += '</optgroup><optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
 
         el.settingOpenRouterModel.innerHTML = html;
-        showToast(`✨ 已成功从 OpenRouter 同步 ${orModels.length} 个可用模型！`);
+        const depCount = orModels.filter((m) => m.is_deprecated).length;
+        const depMsg = depCount > 0 ? ` (含 ${depCount} 个带下线公告模型)` : '';
+        showToast(`✨ 已从 OpenRouter 实时同步 ${orModels.length} 个可用语音模型${depMsg}！`);
       }
     } catch (e) {
-      console.warn('Failed to refresh models:', e);
+      console.warn('Failed to refresh OpenRouter models:', e);
       showToast('⚠️ 刷新模型列表失败: ' + e.message);
     } finally {
       if (el.refreshOpenRouterModelsBtn) {
         el.refreshOpenRouterModelsBtn.textContent = '🔄 刷新模型';
         el.refreshOpenRouterModelsBtn.disabled = false;
+      }
+    }
+  }
+
+  async function refreshDashScopeModels() {
+    if (el.refreshDashScopeModelsBtn) {
+      el.refreshDashScopeModelsBtn.textContent = '🔄 同步中...';
+      el.refreshDashScopeModelsBtn.disabled = true;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (state.dashscopeApiKey) params.set('dashscope_key', state.dashscopeApiKey);
+      if (state.dashscopeBaseUrl) params.set('dashscope_base_url', state.dashscopeBaseUrl);
+      const resp = await apiFetch(`/api/models?${params.toString()}`);
+      const data = await resp.json();
+      const dsModels = data.dashscope?.models || (data.models ? data.models.filter((m) => m.provider === 'dashscope') : []);
+      if (dsModels.length > 0 && el.settingDashScopeModel) {
+        let html = '<optgroup label="☁️ 阿里云百炼官方推荐 ASR">';
+        const recommended = dsModels.filter((m) => m.recommended);
+        const regular = dsModels.filter((m) => !m.recommended && !m.is_deprecated);
+        const deprecated = dsModels.filter((m) => m.is_deprecated);
+
+        recommended.forEach((m) => {
+          const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+          html += `<option value="${m.id}" ${isSelected}>⚡ ${m.name}</option>`;
+        });
+        html += '</optgroup><optgroup label="🎙️ 百炼可用语音 / 全双工模型">';
+        regular.forEach((m) => {
+          const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+          html += `<option value="${m.id}" ${isSelected}>${m.name}</option>`;
+        });
+        if (deprecated.length > 0) {
+          html += '</optgroup><optgroup label="⚠️ 历史已下线模型 (含下线通知)">';
+          deprecated.forEach((m) => {
+            const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+            html += `<option value="${m.id}" ${isSelected}>⚠️ ${m.name} (${m.deprecation_notice || '已废弃'})</option>`;
+          });
+        }
+        html += '</optgroup><optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
+
+        el.settingDashScopeModel.innerHTML = html;
+        showToast(`✨ 已成功从阿里云百炼同步 ${dsModels.length} 个可用语音模型！`);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh DashScope models:', e);
+      showToast('⚠️ 刷新百炼模型列表失败: ' + e.message);
+    } finally {
+      if (el.refreshDashScopeModelsBtn) {
+        el.refreshDashScopeModelsBtn.textContent = '🔄 刷新百炼模型';
+        el.refreshDashScopeModelsBtn.disabled = false;
       }
     }
   }

@@ -253,42 +253,223 @@ class ASRService:
         """Return available models."""
         return AVAILABLE_MODELS
 
-    def fetch_openrouter_qwen_models(self) -> List[Dict[str, Any]]:
-        """Dynamically fetch all available Qwen models from OpenRouter."""
+    def fetch_all_voice_models(
+        self,
+        openrouter_key: Optional[str] = None,
+        dashscope_key: Optional[str] = None,
+        dashscope_base_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Fetch all available voice/audio models from OpenRouter and DashScope, including deprecation notices."""
+        openrouter_models: List[Dict[str, Any]] = []
+        dashscope_models: List[Dict[str, Any]] = []
+        deprecations: List[Dict[str, Any]] = []
+
+        # 1. Fetch OpenRouter Voice & Multimodal Models
         try:
-            resp = requests.get(
-                "https://openrouter.ai/api/v1/models",
-                headers={"User-Agent": "Qwen-Audio-ASR/1.0"},
-                timeout=10,
-            )
+            or_headers = {"User-Agent": "Wu-Translation-ASR/1.0"}
+            eff_or_key = (openrouter_key or self.default_openrouter_key or "").strip()
+            if eff_or_key and eff_or_key.startswith("sk-or-"):
+                or_headers["Authorization"] = f"Bearer {eff_or_key}"
+            resp = requests.get("https://openrouter.ai/api/v1/models", headers=or_headers, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                models_data = data.get("data", [])
-                qwen_models = [m for m in models_data if "qwen" in m.get("id", "").lower()]
-                logger.info(f"Dynamically fetched {len(qwen_models)} Qwen models from OpenRouter")
-                
-                # Merge into custom model entries if not existing
-                existing_ids = {m["id"] for m in AVAILABLE_MODELS}
-                for qm in qwen_models:
-                    qid = qm.get("id")
-                    if qid not in existing_ids:
-                        name = qm.get("name", qid)
-                        desc = qm.get("description", "OpenRouter Qwen series model")
-                        AVAILABLE_MODELS.insert(len(AVAILABLE_MODELS) - 6, {
-                            "id": qid,
-                            "name": f"{name} [OpenRouter]",
+                raw_models = data.get("data", [])
+                for m in raw_models:
+                    mid = m.get("id", "")
+                    mid_lower = mid.lower()
+                    mname = m.get("name", mid)
+                    desc = m.get("description", "")
+                    desc_lower = desc.lower()
+                    modality = m.get("architecture", {}).get("modality", "")
+
+                    is_voice = (
+                        "audio" in modality
+                        or "speech" in modality
+                        or "qwen" in mid_lower
+                        or "whisper" in mid_lower
+                        or "audio" in mid_lower
+                        or "asr" in mid_lower
+                        or "voice" in mid_lower
+                    )
+                    if not is_voice:
+                        continue
+
+                    exp_date = m.get("expiration_date")
+                    status_field = m.get("status")
+                    is_dep = bool(
+                        exp_date
+                        or status_field == "deprecated"
+                        or any(w in desc_lower or w in mname.lower() for w in ["deprecat", "discontinue", "retired", "shut down", "eol"])
+                    )
+                    dep_notice = ""
+                    if exp_date:
+                        dep_notice = f"预计下线日期: {exp_date}"
+                    elif is_dep:
+                        dep_notice = "已废弃 / 建议迁移至新版"
+
+                    model_entry = {
+                        "id": mid,
+                        "name": f"{mname} [OpenRouter]",
+                        "provider": "openrouter",
+                        "category": "OpenRouter 语音与多模态",
+                        "modality": modality,
+                        "context_length": m.get("context_length"),
+                        "pricing": m.get("pricing"),
+                        "description": desc[:180] + ("..." if len(desc) > 180 else ""),
+                        "url": f"https://openrouter.ai/{mid}",
+                        "recommended": mid == "qwen/qwen3-asr-flash-2026-02-10",
+                        "is_deprecated": is_dep,
+                        "deprecation_notice": dep_notice,
+                    }
+                    openrouter_models.append(model_entry)
+                    if is_dep:
+                        deprecations.append({
+                            "id": mid,
                             "provider": "openrouter",
-                            "category": "OpenRouter Qwen 系列",
-                            "url": f"https://openrouter.ai/{qid}",
-                            "description": desc[:140] + ("..." if len(desc) > 140 else ""),
-                            "recommended": False,
-                            "is_filetrans": False,
+                            "name": mname,
+                            "notice": dep_notice,
                         })
-                        existing_ids.add(qid)
-                return AVAILABLE_MODELS
         except Exception as e:
-            logger.warning(f"Failed to dynamically fetch OpenRouter models: {e}")
-        return AVAILABLE_MODELS
+            logger.warning(f"Failed fetching OpenRouter models: {e}")
+
+        # 2. Fetch / Assemble Alibaba DashScope Models
+        known_ds = [
+            {
+                "id": "qwen-audio-3.0-asr-flash-filetrans",
+                "name": "Qwen-Audio 3.0 Flash 录音转写 [DashScope 官方推荐]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 离线长音频转写",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+                "description": "阿里云百炼官方 3.0 Flash 录音文件转写模型，支持说话人分离、逐词时间戳、方言识别，支持至 12 小时。",
+                "recommended": True,
+                "is_filetrans": True,
+                "is_deprecated": False,
+                "deprecation_notice": "",
+            },
+            {
+                "id": "sensevoice-v1",
+                "name": "SenseVoice-v1 [DashScope]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 多语种与富文本识别",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+                "description": "极速多语种与富文本语音识别，支持情感与声音事件检测。",
+                "recommended": False,
+                "is_filetrans": True,
+                "is_deprecated": False,
+                "deprecation_notice": "",
+            },
+            {
+                "id": "paraformer-v2",
+                "name": "Paraformer-v2 [DashScope]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 通用语音识别",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+                "description": "通义实验室自研高精度非流式语音识别模型。",
+                "recommended": False,
+                "is_filetrans": True,
+                "is_deprecated": False,
+                "deprecation_notice": "",
+            },
+            {
+                "id": "paraformer-8k-v2",
+                "name": "Paraformer 8k v2 (电话客服) [DashScope]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 电话客服",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02",
+                "description": "专为 8kHz 电话录音与客服质检优化的识别模型。",
+                "recommended": False,
+                "is_filetrans": True,
+                "is_deprecated": False,
+                "deprecation_notice": "",
+            },
+            {
+                "id": "paraformer-8k-v1",
+                "name": "Paraformer 8k v1 [旧版下线]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 已下线模型",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/",
+                "description": "旧版 8k 客服模型，官方已停止维护升级。",
+                "recommended": False,
+                "is_filetrans": True,
+                "is_deprecated": True,
+                "deprecation_notice": "已下线 / 建议迁移至 paraformer-8k-v2",
+            },
+            {
+                "id": "paraformer-v1",
+                "name": "Paraformer-v1 [旧版下线]",
+                "provider": "dashscope",
+                "category": "阿里云百炼 / 已下线模型",
+                "url": "https://help.aliyun.com/zh/model-studio/asr-model/",
+                "description": "一代 Paraformer 模型，已被 v2 替代。",
+                "recommended": False,
+                "is_filetrans": True,
+                "is_deprecated": True,
+                "deprecation_notice": "已下线 / 建议迁移至 paraformer-v2",
+            },
+        ]
+        dashscope_models.extend(known_ds)
+        for km in known_ds:
+            if km.get("is_deprecated"):
+                deprecations.append({
+                    "id": km["id"],
+                    "provider": "dashscope",
+                    "name": km["name"],
+                    "notice": km["deprecation_notice"],
+                })
+
+        # Try dynamically querying DashScope workspace endpoint if key/url is provided
+        effective_ds_key = (dashscope_key or self.default_dashscope_key or "").strip()
+        effective_ds_base = self.normalize_dashscope_url(dashscope_base_url or self.default_dashscope_base_url)
+        if effective_ds_key and len(effective_ds_key) > 8:
+            try:
+                ds_compat_url = effective_ds_base.replace("/api/v1", "/compatible-mode/v1") + "/models"
+                resp = requests.get(ds_compat_url, headers={"Authorization": f"Bearer {effective_ds_key}"}, timeout=8)
+                if resp.status_code == 200:
+                    ds_data = resp.json()
+                    workspace_models = ds_data.get("data", [])
+                    existing_ds_ids = {m["id"] for m in dashscope_models}
+                    for wm in workspace_models:
+                        w_id = wm.get("id", "")
+                        w_id_lower = w_id.lower()
+                        if any(k in w_id_lower for k in ["audio", "asr", "omni", "voice", "speech", "tts", "livetranslate"]) and w_id not in existing_ds_ids:
+                            dashscope_models.append({
+                                "id": w_id,
+                                "name": f"{w_id} [DashScope 实时/全双工]",
+                                "provider": "dashscope",
+                                "category": "阿里云百炼 / 专属工作区模型",
+                                "url": "https://help.aliyun.com/zh/model-studio/asr-model/",
+                                "description": "阿里云百炼工作区在线可用音频/语音/全双工模型。",
+                                "recommended": False,
+                                "is_filetrans": False,
+                                "is_deprecated": False,
+                                "deprecation_notice": "",
+                            })
+                            existing_ds_ids.add(w_id)
+            except Exception as e:
+                logger.debug(f"Dynamic workspace model fetch note: {e}")
+
+        # Combine
+        all_models = openrouter_models + dashscope_models
+        return {
+            "total_models": len(all_models),
+            "models": all_models,
+            "openrouter": {
+                "count": len(openrouter_models),
+                "models": openrouter_models,
+            },
+            "dashscope": {
+                "count": len(dashscope_models),
+                "models": dashscope_models,
+            },
+            "all_models": all_models,
+            "deprecations": deprecations,
+            "deprecation_count": len(deprecations),
+        }
+
+    def fetch_openrouter_qwen_models(self) -> List[Dict[str, Any]]:
+        """Legacy helper for backward compatibility."""
+        result = self.fetch_all_voice_models()
+        return result.get("all_models", AVAILABLE_MODELS)
 
     def detect_provider(self, model: str, api_key: Optional[str] = None) -> str:
         """Detect whether to route to OpenRouter or DashScope."""

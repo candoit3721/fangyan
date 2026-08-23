@@ -240,10 +240,17 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                 "auth_required": auth_required,
             })
 
-        # 1.1 Refresh models from OpenRouter
-        elif path == "/api/models/refresh":
-            refreshed_models = asr_service.fetch_openrouter_qwen_models()
-            return self._send_json({"models": refreshed_models, "count": len(refreshed_models)})
+        # 1.1 Unified Models list & Deprecation Notices endpoint
+        elif path == "/api/models" or path == "/api/models/refresh":
+            or_key = query.get("openrouter_key", [None])[0] or self.headers.get("X-OpenRouter-Api-Key")
+            ds_key = query.get("dashscope_key", [None])[0] or self.headers.get("X-DashScope-Api-Key")
+            ds_base = query.get("dashscope_base_url", [None])[0] or self.headers.get("X-DashScope-Base-Url")
+            model_info = asr_service.fetch_all_voice_models(
+                openrouter_key=or_key,
+                dashscope_key=ds_key,
+                dashscope_base_url=ds_base,
+            )
+            return self._send_json(model_info)
 
         # 2. History list
         elif path == "/api/history":

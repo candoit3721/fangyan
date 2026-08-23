@@ -440,6 +440,7 @@
                 </optgroup>
               </select>
               <input type="text" id="settingOpenRouterCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义模型ID, 如 qwen/qwen3-asr-flash-2026-02-10...">
+              <div id="openRouterDeprecationNotice" class="form-hint text-amber hidden mt-1">⚠️ 该模型存在下线计划或已废弃通知</div>
             </div>
           </div>
 
@@ -492,7 +493,10 @@
             <div class="form-group">
               <label class="form-label" for="settingDashScopeModel">
                 <span>百炼识别模型 (DashScope Models)</span>
-                <a href="https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02" target="_blank" class="text-link">官方文档 ↗</a>
+                <span>
+                  <button type="button" id="refreshDashScopeModelsBtn" class="btn btn-ghost btn-sm text-xs" title="从阿里云百炼实时同步最新语音与工作区模型列表">🔄 刷新百炼模型</button>
+                  <a href="https://help.aliyun.com/zh/model-studio/asr-model/#asr-decide02" target="_blank" class="text-link">官方文档 ↗</a>
+                </span>
               </label>
               <select id="settingDashScopeModel" class="form-select">
                 <option value="qwen-audio-3.0-asr-flash-filetrans" selected>⚡ qwen-audio-3.0-asr-flash-filetrans (3.0 Flash 录音转写 官方推荐)</option>
@@ -502,6 +506,7 @@
                 <option value="custom">✏️ 自定义模型名称...</option>
               </select>
               <input type="text" id="settingDashScopeCustomModel" class="form-input font-mono mt-2 hidden" placeholder="输入自定义百炼模型名称...">
+              <div id="dashScopeDeprecationNotice" class="form-hint text-amber hidden mt-1">⚠️ 该模型存在下线计划或已废弃通知</div>
             </div>
           </div>
 
