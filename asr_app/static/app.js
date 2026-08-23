@@ -1080,11 +1080,15 @@
         } else if (data.status === 'FAILED' || data.status === 'CANCELED') {
           hideProgressCard();
           showError(data.error_message || data.message || '识别任务失败');
+        } else if (data.status === 'RUNNING') {
+          if (el.progressSubtitle) el.progressSubtitle.textContent = '阿里云百炼正在云端转写与对齐时间戳中，请稍候...';
+        } else if (data.status === 'PENDING') {
+          if (el.progressSubtitle) el.progressSubtitle.textContent = '已提交百炼离线队列，正在排队中（离线长录音任务通常需要 20~45 秒）...';
         }
       } catch (err) {
         console.warn('Poll error:', err);
       }
-    }, 1500);
+    }, 2000);
   }
 
   // ==========================================================================

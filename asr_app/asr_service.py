@@ -969,12 +969,13 @@ class ASRService:
         """Download result JSON if transcription_url is present, and normalize transcripts."""
         results = raw_output.get("results", [])
         transcription_data = None
-        transcription_url = None
+        transcription_url = raw_output.get("transcription_url")
 
         if results and len(results) > 0:
             first_res = results[0]
             if isinstance(first_res, dict):
-                transcription_url = first_res.get("transcription_url")
+                if not transcription_url:
+                    transcription_url = first_res.get("transcription_url")
                 if first_res.get("subtask_status") == "FAILED":
                     sub_code = first_res.get("code") or ""
                     sub_msg = first_res.get("message") or raw_output.get("message") or "Subtask transcription failed"
