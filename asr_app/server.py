@@ -213,27 +213,25 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
 
         # 1. Config endpoint
         if path == "/api/config":
-            has_dashscope_key = bool(os.environ.get("DASHSCOPE_API_KEY", "").strip())
-            has_openrouter_key = bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
-            dashscope_base_url = os.environ.get("DASHSCOPE_BASE_URL", "").strip() or os.environ.get("DASHSCOPE_HTTP_BASE_URL", "").strip()
+            raw_dashscope_key = (os.environ.get("DASHSCOPE_API_KEY", "") or asr_service.default_dashscope_key or "").strip()
+            raw_openrouter_key = (os.environ.get("OPENROUTER_API_KEY", "") or asr_service.default_openrouter_key or "").strip()
+            has_dashscope_key = bool(raw_dashscope_key)
+            has_openrouter_key = bool(raw_openrouter_key)
+            dashscope_base_url = (os.environ.get("DASHSCOPE_BASE_URL", "") or os.environ.get("DASHSCOPE_HTTP_BASE_URL", "") or asr_service.default_dashscope_base_url or "").strip()
             auth_required = self._is_auth_required()
 
-            masked_dashscope_key = ""
-            if has_dashscope_key:
-                raw = os.environ.get("DASHSCOPE_API_KEY", "").strip()
-                masked_dashscope_key = raw[:6] + "..." + raw[-4:] if len(raw) > 10 else "******"
-
-            masked_openrouter_key = ""
-            if has_openrouter_key:
-                raw = os.environ.get("OPENROUTER_API_KEY", "").strip()
-                masked_openrouter_key = raw[:8] + "..." + raw[-4:] if len(raw) > 12 else "******"
+            masked_dashscope_key = raw_dashscope_key[:6] + "..." + raw_dashscope_key[-4:] if len(raw_dashscope_key) > 10 else raw_dashscope_key
+            masked_openrouter_key = raw_openrouter_key[:8] + "..." + raw_openrouter_key[-4:] if len(raw_openrouter_key) > 12 else raw_openrouter_key
 
             return self._send_json({
                 "models": AVAILABLE_MODELS,
                 "default_model": "qwen-audio-3.0-asr-flash-filetrans",
+                "default_provider": "dashscope" if has_dashscope_key else ("openrouter" if has_openrouter_key else "dashscope"),
                 "has_env_api_key": has_openrouter_key or has_dashscope_key,
                 "has_openrouter_key": has_openrouter_key,
                 "has_dashscope_key": has_dashscope_key,
+                "dashscope_api_key": raw_dashscope_key,
+                "openrouter_api_key": raw_openrouter_key,
                 "dashscope_base_url": dashscope_base_url,
                 "masked_openrouter_key": masked_openrouter_key,
                 "masked_dashscope_key": masked_dashscope_key,

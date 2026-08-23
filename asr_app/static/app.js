@@ -277,7 +277,7 @@
     setupEventListeners();
     initVisualizerCanvas();
     await checkAuthStatus();
-    loadServerConfig();
+    await loadServerConfig();
     updateUIHeader();
   }
 
@@ -375,33 +375,112 @@
         const config = await resp.json();
         state.serverConfig = config;
 
-        // Auto-select active provider for fresh sessions based on server env variables
-        const storedProvider = localStorage.getItem('asr_active_provider');
-        if (!storedProvider) {
-          if (config.has_dashscope_key && !config.has_openrouter_key) {
-            state.activeProvider = 'dashscope';
-          } else if (config.has_openrouter_key && !config.has_dashscope_key) {
-            state.activeProvider = 'openrouter';
-          } else if (config.has_dashscope_key) {
-            // Default to DashScope for Chinese dialect ASR
-            state.activeProvider = 'dashscope';
-          }
+        // Auto-populate actual API keys from server configuration (Render env vars)
+        if (config.dashscope_api_key && (!state.dashscopeApiKey || state.dashscopeApiKey === 'configured_in_env')) {
+          state.dashscopeApiKey = config.dashscope_api_key;
         }
-
-        if (config.has_openrouter_key && (!state.openrouterApiKey || state.openrouterApiKey === 'configured_in_env')) {
-          state.openrouterApiKey = 'configured_in_env';
-        }
-        if (config.has_dashscope_key && (!state.dashscopeApiKey || state.dashscopeApiKey === 'configured_in_env')) {
-          state.dashscopeApiKey = 'configured_in_env';
+        if (config.openrouter_api_key && (!state.openrouterApiKey || state.openrouterApiKey === 'configured_in_env')) {
+          state.openrouterApiKey = config.openrouter_api_key;
         }
         if (config.dashscope_base_url && !state.dashscopeBaseUrl) {
           state.dashscopeBaseUrl = config.dashscope_base_url;
         }
+
+        // Auto-select active provider for fresh sessions based on server env variables
+        const storedProvider = localStorage.getItem('asr_active_provider');
+        if (!storedProvider) {
+          state.activeProvider = config.default_provider || (config.has_dashscope_key ? 'dashscope' : 'openrouter');
+        }
+
+        // Set verified working default models
+        if (!localStorage.getItem('asr_dashscope_model') || state.dashscopeModel === 'qwen3-asr-flash-filetrans') {
+          state.dashscopeModel = 'qwen-audio-3.0-asr-flash-filetrans';
+        }
+        if (!localStorage.getItem('asr_openrouter_model')) {
+          state.openrouterModel = 'google/gemini-3.7-flash';
+        }
+
         syncActiveState();
         updateUIHeader();
+
+        // Refresh verified models on startup with working defaults
+        refreshAllModelsOnStartup();
       }
     } catch (e) {
       console.warn('Could not fetch server config:', e);
+    }
+  }
+
+  async function refreshAllModelsOnStartup() {
+    try {
+      const params = new URLSearchParams();
+      if (state.dashscopeApiKey) params.set('dashscope_key', state.dashscopeApiKey);
+      if (state.dashscopeBaseUrl) params.set('dashscope_base_url', state.dashscopeBaseUrl);
+      if (state.openrouterApiKey) params.set('openrouter_key', state.openrouterApiKey);
+
+      const resp = await apiFetch(`/api/models?${params.toString()}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const dsModels = data.dashscope?.models || [];
+        if (dsModels.length > 0 && el.settingDashScopeModel) {
+          let html = '<optgroup label="☁️ 阿里云百炼官方推荐 ASR">';
+          const recommended = dsModels.filter((m) => m.recommended);
+          const regular = dsModels.filter((m) => !m.recommended && !m.is_deprecated);
+          const deprecated = dsModels.filter((m) => m.is_deprecated);
+
+          recommended.forEach((m) => {
+            const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+            html += `<option value="${m.id}" ${isSelected}>⚡ ${m.name}</option>`;
+          });
+          if (regular.length > 0) {
+            html += '</optgroup><optgroup label="🎙️ 百炼离线录音转写模型 (ASR)">';
+            regular.forEach((m) => {
+              const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+              html += `<option value="${m.id}" ${isSelected}>${m.name}</option>`;
+            });
+          }
+          if (deprecated.length > 0) {
+            html += '</optgroup><optgroup label="⚠️ 历史已下线模型 (含下线通知)">';
+            deprecated.forEach((m) => {
+              const isSelected = m.id === state.dashscopeModel ? 'selected' : '';
+              html += `<option value="${m.id}" ${isSelected}>⚠️ ${m.name} (${m.deprecation_notice || '已废弃'})</option>`;
+            });
+          }
+          html += '</optgroup><optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
+          el.settingDashScopeModel.innerHTML = html;
+        }
+
+        const orModels = data.openrouter?.models || [];
+        if (orModels.length > 0 && el.settingOpenRouterModel) {
+          let html = '<optgroup label="🌟 OpenRouter 中文多模态语音模型">';
+          const recommended = orModels.filter((m) => m.recommended);
+          const regular = orModels.filter((m) => !m.recommended && !m.is_deprecated);
+          const deprecated = orModels.filter((m) => m.is_deprecated);
+
+          recommended.forEach((m) => {
+            const isSelected = m.id === state.openrouterModel ? 'selected' : '';
+            html += `<option value="${m.id}" ${isSelected}>⚡ ${m.name}</option>`;
+          });
+          if (regular.length > 0) {
+            html += '</optgroup><optgroup label="🎙️ 可用原生中文语音多模态模型">';
+            regular.forEach((m) => {
+              const isSelected = m.id === state.openrouterModel ? 'selected' : '';
+              html += `<option value="${m.id}" ${isSelected}>${m.name}</option>`;
+            });
+          }
+          if (deprecated.length > 0) {
+            html += '</optgroup><optgroup label="⚠️ 下线通知 / 即将废弃">';
+            deprecated.forEach((m) => {
+              const isSelected = m.id === state.openrouterModel ? 'selected' : '';
+              html += `<option value="${m.id}" ${isSelected}>⚠️ ${m.name} (${m.deprecation_notice})</option>`;
+            });
+          }
+          html += '</optgroup><optgroup label="✏️ 自定义"><option value="custom">✏️ 自定义模型名称...</option></optgroup>';
+          el.settingOpenRouterModel.innerHTML = html;
+        }
+      }
+    } catch (e) {
+      console.warn('Startup model refresh warning:', e);
     }
   }
 
