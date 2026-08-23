@@ -431,14 +431,16 @@ class ASRService:
                     for wm in workspace_models:
                         w_id = wm.get("id", "")
                         w_id_lower = w_id.lower()
-                        if any(k in w_id_lower for k in ["audio", "asr", "omni", "voice", "speech", "tts", "livetranslate"]) and w_id not in existing_ds_ids:
+                        is_tts = any(k in w_id_lower for k in ["tts", "vc", "vd", "cosyvoice", "sambert"])
+                        is_asr = any(k in w_id_lower for k in ["audio", "asr", "sensevoice", "paraformer", "omni", "livetranslate"])
+                        if is_asr and not is_tts and w_id not in existing_ds_ids:
                             dashscope_models.append({
                                 "id": w_id,
-                                "name": f"{w_id} [DashScope 实时/全双工]",
+                                "name": f"{w_id} [DashScope 实时/多模态]",
                                 "provider": "dashscope",
                                 "category": "阿里云百炼 / 专属工作区模型",
                                 "url": "https://help.aliyun.com/zh/model-studio/asr-model/",
-                                "description": "阿里云百炼工作区在线可用音频/语音/全双工模型。",
+                                "description": "阿里云百炼工作区在线可用音频/语音识别模型。",
                                 "recommended": False,
                                 "is_filetrans": False,
                                 "is_deprecated": False,
@@ -1023,6 +1025,19 @@ class ASRService:
         if model in ["qwen3-asr-flash-filetrans", "qwen3-asr-flash", "qwen3-audio-flash"]:
             model = "qwen-audio-3.0-asr-flash-filetrans"
 
+        # Validate if model is a TTS (Text-to-Speech) or non-ASR model
+        m_lower = model.lower()
+        if any(k in m_lower for k in ["tts", "vc", "vd", "cosyvoice", "sambert"]):
+            raise RuntimeError(
+                f"【{model}】是语音合成 (TTS, 文本生成语音) 模型，不支持录音转写 (ASR, 语音转文字)。\n"
+                "录音转写请在【设置】->【阿里云百炼】中选择官方转写模型: 【qwen-audio-3.0-asr-flash-filetrans】或【sensevoice-v1】。"
+            )
+        if "realtime" in m_lower or "s2s" in m_lower:
+            raise RuntimeError(
+                f"【{model}】是实时全双工流式对齐模型，不支持离线长录音转写。\n"
+                "录音转写请在【设置】->【阿里云百炼】中选择官方转写模型: 【qwen-audio-3.0-asr-flash-filetrans】。"
+            )
+
         effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
         dashscope.base_http_api_url = effective_base_url
         dashscope.api_key = api_key
@@ -1070,6 +1085,13 @@ class ASRService:
                     "排查建议:\n"
                     "1. 请在【设置】->【阿里云百炼】中确认 DashScope API Key 是否正确输入。\n"
                     "2. 若您的 Key 属于阿里云百炼新加坡区或专属工作区，请在设置中配置对应的 API Base URL (例如: https://ws-uu5x3qpaxvgc7cut.ap-southeast-1.maas.aliyuncs.com/api/v1)。"
+                )
+            elif "does not support asynchronous calls" in err_text or "AccessDenied" in err_code:
+                err_msg = (
+                    f"模型【{model}】不支持百炼离线长录音转写接口 (HTTP 403: current user api does not support asynchronous calls)。\n"
+                    "排查建议:\n"
+                    "1. 该模型可能属于实时流式、全双工或语音合成 (TTS) 模型，不能通过离线录音转写接口调用。\n"
+                    "2. 录音文件转写请在【设置】->【阿里云百炼】中选择官方推荐的离线转写模型: 【qwen-audio-3.0-asr-flash-filetrans】或【sensevoice-v1】。"
                 )
             else:
                 err_msg = f"DashScope 任务提交失败 (HTTP {response.status_code}): {err_code} - {err_text}"
