@@ -285,16 +285,21 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
             session_id = query.get("session_id", [None])[0]
             session = history_manager.get(session_id) if session_id else None
 
-            api_key = (
+            raw_key = (
                 self.headers.get("X-DashScope-Api-Key")
                 or query.get("api_key", [None])[0]
                 or (session.get("api_key") if session else None)
             )
-            base_url = (
+            if raw_key and ("..." in raw_key or raw_key == "configured_in_env"):
+                raw_key = None
+            api_key = raw_key
+
+            raw_base = (
                 self.headers.get("X-DashScope-Base-Url")
                 or query.get("base_url", [None])[0]
                 or (session.get("base_url") if session else None)
             )
+            base_url = raw_base.strip() if raw_base and raw_base.strip() else None
 
             try:
                 task_data = asr_service.fetch_task_status(task_id, api_key=api_key, base_url=base_url)
@@ -562,7 +567,11 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
 
         # Parse options
         model = fields.get("model") or "qwen-audio-3.0-asr-flash-filetrans"
-        api_key = fields.get("api_key") or self.headers.get("X-DashScope-Api-Key")
+        raw_key = fields.get("api_key") or self.headers.get("X-DashScope-Api-Key") or self.headers.get("X-OpenRouter-Api-Key")
+        if raw_key and ("..." in raw_key or raw_key == "configured_in_env"):
+            raw_key = None
+        api_key = raw_key
+
         lang_str = fields.get("language_hints")
         language_hints = [l.strip() for l in lang_str.split(",") if l.strip()] if lang_str else None
         diarization_enabled = str(fields.get("diarization_enabled", "false")).lower() in ["true", "1", "yes"]
@@ -571,7 +580,8 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         disfluency_removal = str(fields.get("disfluency_removal_enabled", "false")).lower() in ["true", "1", "yes"]
         timestamp_alignment = str(fields.get("timestamp_alignment_enabled", "false")).lower() in ["true", "1", "yes"]
         prompt = fields.get("prompt")
-        base_url = fields.get("base_url") or self.headers.get("X-DashScope-Base-Url")
+        raw_base = fields.get("base_url") or self.headers.get("X-DashScope-Base-Url")
+        base_url = raw_base.strip() if raw_base and raw_base.strip() else None
 
         audio_url = f"/api/audio/{saved_filename}"
 

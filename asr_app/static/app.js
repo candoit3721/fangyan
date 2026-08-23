@@ -373,11 +373,26 @@
       const resp = await apiFetch('/api/config');
       if (resp.ok) {
         const config = await resp.json();
-        if (config.has_openrouter_key && !state.openrouterApiKey) {
-          state.openrouterApiKey = config.masked_openrouter_key || 'configured_in_env';
+        state.serverConfig = config;
+
+        // Auto-select active provider for fresh sessions based on server env variables
+        const storedProvider = localStorage.getItem('asr_active_provider');
+        if (!storedProvider) {
+          if (config.has_dashscope_key && !config.has_openrouter_key) {
+            state.activeProvider = 'dashscope';
+          } else if (config.has_openrouter_key && !config.has_dashscope_key) {
+            state.activeProvider = 'openrouter';
+          } else if (config.has_dashscope_key) {
+            // Default to DashScope for Chinese dialect ASR
+            state.activeProvider = 'dashscope';
+          }
         }
-        if (config.has_dashscope_key && !state.dashscopeApiKey) {
-          state.dashscopeApiKey = config.masked_dashscope_key || 'configured_in_env';
+
+        if (config.has_openrouter_key && (!state.openrouterApiKey || state.openrouterApiKey === 'configured_in_env')) {
+          state.openrouterApiKey = 'configured_in_env';
+        }
+        if (config.has_dashscope_key && (!state.dashscopeApiKey || state.dashscopeApiKey === 'configured_in_env')) {
+          state.dashscopeApiKey = 'configured_in_env';
         }
         if (config.dashscope_base_url && !state.dashscopeBaseUrl) {
           state.dashscopeBaseUrl = config.dashscope_base_url;
@@ -1401,7 +1416,15 @@
   function openSettingsModal() {
     // 1. OpenRouter Pane
     if (el.settingOpenRouterApiKey) {
+      const hasEnvOr = state.serverConfig?.has_openrouter_key;
       el.settingOpenRouterApiKey.value = state.openrouterApiKey && state.openrouterApiKey !== 'configured_in_env' ? state.openrouterApiKey : '';
+      if (hasEnvOr && !el.settingOpenRouterApiKey.value) {
+        el.settingOpenRouterApiKey.placeholder = '✓ 已从服务器环境变量 (OPENROUTER_API_KEY) 读取';
+        if (el.openRouterKeyValidationResult) {
+          el.openRouterKeyValidationResult.textContent = '✓ 服务器环境变量已配置 OPENROUTER_API_KEY';
+          el.openRouterKeyValidationResult.className = 'form-hint text-success';
+        }
+      }
     }
     if (el.settingOpenRouterModel) {
       const orKnown = [
@@ -1424,10 +1447,21 @@
 
     // 2. Alibaba DashScope Pane
     if (el.settingDashScopeApiKey) {
+      const hasEnvDs = state.serverConfig?.has_dashscope_key;
       el.settingDashScopeApiKey.value = state.dashscopeApiKey && state.dashscopeApiKey !== 'configured_in_env' ? state.dashscopeApiKey : '';
+      if (hasEnvDs && !el.settingDashScopeApiKey.value) {
+        el.settingDashScopeApiKey.placeholder = '✓ 已从服务器环境变量 (DASHSCOPE_API_KEY) 读取';
+        if (el.dashScopeKeyValidationResult) {
+          el.dashScopeKeyValidationResult.textContent = '✓ 服务器环境变量已配置 DASHSCOPE_API_KEY';
+          el.dashScopeKeyValidationResult.className = 'form-hint text-success';
+        }
+      }
     }
     if (el.settingDashScopeBaseUrl) {
       el.settingDashScopeBaseUrl.value = state.dashscopeBaseUrl || '';
+      if (!el.settingDashScopeBaseUrl.value && state.serverConfig?.dashscope_base_url) {
+        el.settingDashScopeBaseUrl.value = state.serverConfig.dashscope_base_url;
+      }
     }
     if (el.settingDashScopeModel) {
       if (state.dashscopeModel === 'qwen3-asr-flash-filetrans') {

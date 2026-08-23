@@ -426,11 +426,11 @@ class ASRService:
         return "dashscope"
 
     def get_api_key(self, provided_key: Optional[str] = None, provider: str = "dashscope") -> str:
-        if provided_key and provided_key.strip() and provided_key != "configured_in_env":
+        if provided_key and provided_key.strip() and provided_key != "configured_in_env" and "..." not in provided_key:
             k = provided_key.strip()
             # Mismatch detection: If user passed an OpenRouter key for DashScope model
             if provider == "dashscope" and (k.startswith("sk-or-") or k.startswith("sk-or-v1-")):
-                env_key = os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
+                env_key = (os.environ.get("DASHSCOPE_API_KEY", "") or self.default_dashscope_key or "").strip()
                 if env_key:
                     return env_key
                 raise ValueError(
@@ -439,7 +439,7 @@ class ASRService:
                 )
             # Mismatch detection: If user passed DashScope key for OpenRouter model
             elif provider == "openrouter" and not (k.startswith("sk-or-") or k.startswith("sk-or-v1-")):
-                env_key = os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
+                env_key = (os.environ.get("OPENROUTER_API_KEY", "") or self.default_openrouter_key or "").strip()
                 if env_key:
                     return env_key
                 raise ValueError(
@@ -449,8 +449,8 @@ class ASRService:
             return k
 
         if provider == "openrouter":
-            return os.environ.get("OPENROUTER_API_KEY", "").strip() or self.default_openrouter_key.strip()
-        return os.environ.get("DASHSCOPE_API_KEY", "").strip() or self.default_dashscope_key.strip()
+            return (os.environ.get("OPENROUTER_API_KEY", "") or self.default_openrouter_key or "").strip()
+        return (os.environ.get("DASHSCOPE_API_KEY", "") or self.default_dashscope_key or "").strip()
 
     def verify_api_key(
         self,
@@ -648,11 +648,19 @@ class ASRService:
         audio_format = format_map.get(ext, "wav")
         base64_audio = base64.b64encode(audio_bytes).decode("utf-8")
 
+        # Resolve API key (supports server env fallback when opened from new browser)
+        api_key = self.get_api_key(api_key, provider="openrouter")
+        if not api_key:
+            raise RuntimeError(
+                "未检测到有效的 OpenRouter API Key。\n"
+                "请在右上角【设置】->【OpenRouter】中填入 API Key，或在服务器环境变量中配置 OPENROUTER_API_KEY。"
+            )
+
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "http://localhost:8765",
-            "X-Title": "Qwen-Audio ASR Platform",
+            "X-Title": "Wu-Translation-ASR Platform",
         }
 
         transcription_res = None
@@ -957,6 +965,14 @@ class ASRService:
             raise RuntimeError(
                 f"【{model}】是实时全双工流式对齐模型，不支持离线长录音转写。\n"
                 "录音转写请在【设置】->【阿里云百炼】中选择官方转写模型: 【qwen-audio-3.0-asr-flash-filetrans】。"
+            )
+
+        # Resolve API key (supports server env fallback when opened from new browser)
+        api_key = self.get_api_key(api_key, provider="dashscope")
+        if not api_key:
+            raise RuntimeError(
+                "未检测到有效的 阿里云百炼 API Key。\n"
+                "请在右上角【设置】->【阿里云百炼】中填入 API Key，或在服务器环境变量中配置 DASHSCOPE_API_KEY。"
             )
 
         effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
