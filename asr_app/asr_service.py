@@ -838,6 +838,10 @@ class ASRService:
             if v is not None:
                 extra_kwargs[k] = v
 
+        # Normalize model aliases to official DashScope IDs
+        if model in ["qwen3-asr-flash-filetrans", "qwen3-asr-flash", "qwen3-audio-flash"]:
+            model = "qwen-audio-3.0-asr-flash-filetrans"
+
         effective_base_url = self.normalize_dashscope_url(base_url or self.default_dashscope_base_url)
         dashscope.base_http_api_url = effective_base_url
         dashscope.api_key = api_key

@@ -1421,10 +1421,12 @@
       el.settingDashScopeBaseUrl.value = state.dashscopeBaseUrl || '';
     }
     if (el.settingDashScopeModel) {
+      if (state.dashscopeModel === 'qwen3-asr-flash-filetrans') {
+        state.dashscopeModel = 'qwen-audio-3.0-asr-flash-filetrans';
+        localStorage.setItem('asr_dashscope_model', state.dashscopeModel);
+      }
       const dsKnown = [
         'qwen-audio-3.0-asr-flash-filetrans',
-        'qwen3-asr-flash-filetrans',
-        'qwen-audio-asr',
         'sensevoice-v1',
         'paraformer-v2',
         'paraformer-8k-v2',
