@@ -2037,16 +2037,44 @@ input:checked + .toggle-slider:before {
     align-items: center !important;
     justify-content: center !important;
     padding: 1rem !important;
+    box-sizing: border-box !important;
   }
 
   #loginModal .login-modal-card {
     border-radius: var(--radius-lg) !important;
-    max-width: 360px !important;
-    width: 100% !important;
+    max-width: calc(100vw - 2rem) !important;
+    width: 360px !important;
     margin: auto !important;
     padding: 1.5rem 1.25rem !important;
     transform: translateY(-5vh); /* Lifted to optimal eye and thumb level */
     box-shadow: var(--shadow-lg);
+    box-sizing: border-box !important;
+  }
+
+  .login-form {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .input-with-action {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .input-with-action input {
+    min-width: 0 !important;
+    flex: 1 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Form Inputs on Mobile - 16px font-size prevents iOS Safari from zooming and expanding the viewport on focus */
+  .form-input, .form-select, .form-textarea, input[type="text"], input[type="password"], input[type="number"], .search-input {
+    font-size: 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   #settingsModal .modal-card {
@@ -2054,6 +2082,7 @@ input:checked + .toggle-slider:before {
     max-width: 100%;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     max-height: 90vh;
+    box-sizing: border-box !important;
   }
 
   .modal-header {
