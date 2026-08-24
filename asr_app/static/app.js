@@ -15,6 +15,8 @@
   const state = {
     authPasscode: sessionStorage.getItem('app_passcode') || '',
     authRequired: false,
+    speakerNames: {},
+    renamingSpeakerId: null,
 
     // Active Provider: 'openrouter' | 'dashscope'
     activeProvider: localStorage.getItem('asr_active_provider') || 'openrouter',
@@ -241,6 +243,16 @@
 
     // Toast
     toastNotification: document.getElementById('toastNotification'),
+
+    // Rename Speaker Modal
+    renameSpeakerModal: document.getElementById('renameSpeakerModal'),
+    renameSpeakerForm: document.getElementById('renameSpeakerForm'),
+    renameSpeakerOriginLabel: document.getElementById('renameSpeakerOriginLabel'),
+    customSpeakerNameInput: document.getElementById('customSpeakerNameInput'),
+    saveSpeakerNameBtn: document.getElementById('saveSpeakerNameBtn'),
+    cancelRenameSpeakerBtn: document.getElementById('cancelRenameSpeakerBtn'),
+    closeRenameSpeakerBtn: document.getElementById('closeRenameSpeakerBtn'),
+    resetSpeakerNameBtn: document.getElementById('resetSpeakerNameBtn'),
   };
 
   // ==========================================================================
@@ -752,6 +764,18 @@
         if (e.target === el.historyDrawer) closeHistoryDrawer();
       });
     }
+
+    // Rename Speaker Modal
+    if (el.closeRenameSpeakerBtn) el.closeRenameSpeakerBtn.addEventListener('click', closeRenameSpeakerModal);
+    if (el.cancelRenameSpeakerBtn) el.cancelRenameSpeakerBtn.addEventListener('click', closeRenameSpeakerModal);
+    if (el.renameSpeakerForm) el.renameSpeakerForm.addEventListener('submit', handleSaveSpeakerName);
+    if (el.saveSpeakerNameBtn) el.saveSpeakerNameBtn.addEventListener('click', handleSaveSpeakerName);
+    if (el.resetSpeakerNameBtn) el.resetSpeakerNameBtn.addEventListener('click', handleResetSpeakerName);
+    if (el.renameSpeakerModal) {
+      el.renameSpeakerModal.addEventListener('click', (e) => {
+        if (e.target === el.renameSpeakerModal) closeRenameSpeakerModal();
+      });
+    }
   }
 
   function switchTab(mode) {
@@ -1230,10 +1254,103 @@
   }
 
   // ==========================================================================
+  // Speaker Renaming Helpers & Modal Management
+  // ==========================================================================
+
+  function extractSpeakerId(rawLabel) {
+    if (!rawLabel) return '0';
+    const str = String(rawLabel).trim();
+    const match = str.match(/\d+/);
+    return match ? match[0] : str;
+  }
+
+  function getSpeakerDisplayName(rawLabel) {
+    if (!rawLabel) return '';
+    const id = extractSpeakerId(rawLabel);
+    if (state.speakerNames && state.speakerNames[id]) {
+      return state.speakerNames[id].slice(0, 3);
+    }
+    return id;
+  }
+
+  function getSpeakerColorIndex(rawLabel) {
+    const id = extractSpeakerId(rawLabel);
+    const num = parseInt(id, 10);
+    if (!isNaN(num)) {
+      return Math.abs(num) % 6;
+    }
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash + id.charCodeAt(i)) % 6;
+    }
+    return hash;
+  }
+
+  function openRenameSpeakerModal(rawLabel) {
+    const id = extractSpeakerId(rawLabel);
+    state.renamingSpeakerId = id;
+    if (el.renameSpeakerOriginLabel) {
+      el.renameSpeakerOriginLabel.textContent = `说话人编号: ${id}`;
+    }
+    if (el.customSpeakerNameInput) {
+      el.customSpeakerNameInput.value = state.speakerNames[id] || '';
+    }
+    if (el.renameSpeakerModal) {
+      el.renameSpeakerModal.classList.remove('hidden');
+      if (el.customSpeakerNameInput) {
+        setTimeout(() => {
+          el.customSpeakerNameInput.focus();
+          el.customSpeakerNameInput.select();
+        }, 60);
+      }
+    }
+  }
+
+  function closeRenameSpeakerModal() {
+    if (el.renameSpeakerModal) {
+      el.renameSpeakerModal.classList.add('hidden');
+    }
+    state.renamingSpeakerId = null;
+  }
+
+  function handleSaveSpeakerName(e) {
+    if (e) e.preventDefault();
+    const id = state.renamingSpeakerId;
+    if (!id) {
+      closeRenameSpeakerModal();
+      return;
+    }
+    const newName = el.customSpeakerNameInput ? el.customSpeakerNameInput.value.trim().slice(0, 3) : '';
+    if (newName) {
+      state.speakerNames[id] = newName;
+      showToast(`已将说话人 ${id} 命名为 "${newName}"`);
+    } else {
+      delete state.speakerNames[id];
+      showToast(`已恢复说话人 ${id} 默认编号`);
+    }
+    closeRenameSpeakerModal();
+    if (state.currentTranscriptData) {
+      renderTranscriptionResults(state.currentTranscriptData, false);
+    }
+  }
+
+  function handleResetSpeakerName() {
+    const id = state.renamingSpeakerId;
+    if (id) {
+      delete state.speakerNames[id];
+      showToast(`已恢复说话人 ${id} 默认编号`);
+    }
+    closeRenameSpeakerModal();
+    if (state.currentTranscriptData) {
+      renderTranscriptionResults(state.currentTranscriptData, false);
+    }
+  }
+
+  // ==========================================================================
   // Render Results & Interactive Synchronized Audio Player
   // ==========================================================================
 
-  function renderTranscriptionResults(data) {
+  function renderTranscriptionResults(data, shouldScroll = true) {
     state.currentTranscriptData = data;
     el.resultsSection.classList.remove('hidden');
 
@@ -1247,13 +1364,13 @@
     el.metaSentenceCount.textContent = sentences.length;
     el.metaCharCount.textContent = fullText.length;
 
-    // 1. Dialogue Sentence List
+    // 1. Dialogue Sentence List (2-Row Layout with Speaker Badges)
     el.sentenceList.innerHTML = '';
     if (sentences.length === 0 && fullText) {
       // Fallback single block
       const card = document.createElement('div');
       card.className = 'sentence-card';
-      card.innerHTML = `<div class="sentence-text">${escapeHtml(fullText)}</div>`;
+      card.innerHTML = `<div class="sentence-body"><div class="sentence-text">${escapeHtml(fullText)}</div></div>`;
       el.sentenceList.appendChild(card);
     } else {
       sentences.forEach((s, idx) => {
@@ -1263,17 +1380,51 @@
         card.dataset.begin = s.begin_time;
         card.dataset.end = s.end_time;
 
-        const speakerBadge = s.speaker_label ? `<span class="speaker-badge">${escapeHtml(s.speaker_label)}</span>` : '';
-        const timeBtn = `<button class="sentence-time-btn" title="点击播放">${s.begin_time_str || '00:00'}</button>`;
+        let speakerPillHtml = '';
+        if (s.speaker_label) {
+          const speakerId = extractSpeakerId(s.speaker_label);
+          const displayName = getSpeakerDisplayName(s.speaker_label);
+          const colorIdx = getSpeakerColorIndex(s.speaker_label);
+          speakerPillHtml = `
+            <button type="button" class="speaker-pill speaker-color-${colorIdx}" data-speaker-id="${speakerId}" title="点击重命名此说话人 (最多3字)">
+              <svg class="speaker-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <span class="speaker-name-text">${escapeHtml(displayName)}</span>
+              <svg class="edit-hint-icon" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+              </svg>
+            </button>
+          `;
+        }
 
         card.innerHTML = `
-          ${timeBtn}
+          <div class="sentence-header">
+            <div class="sentence-header-left">
+              ${speakerPillHtml}
+              <span class="sentence-time-badge font-mono">${s.begin_time_str || '00:00'}</span>
+            </div>
+            <div class="sentence-header-right">
+              <button type="button" class="sentence-play-mini-btn" title="播放本句">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </button>
+            </div>
+          </div>
           <div class="sentence-body">
-            <div class="sentence-text">${speakerBadge}${escapeHtml(s.text)}</div>
+            <div class="sentence-text">${escapeHtml(s.text)}</div>
           </div>
         `;
 
-        // Click on time button or sentence body seeks and plays audio
+        // Click on speaker pill to rename
+        const speakerBtn = card.querySelector('.speaker-pill');
+        if (speakerBtn) {
+          speakerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openRenameSpeakerModal(s.speaker_label);
+          });
+        }
+
+        // Click on sentence card seeks and plays audio
         card.addEventListener('click', () => {
           seekAudioToMs(s.begin_time);
         });
@@ -1283,20 +1434,38 @@
     }
 
     // 2. Full Document Text
-    el.fullDocumentText.textContent = fullText || '（无转写文本）';
+    let formattedDoc = fullText;
+    if (sentences.length > 0) {
+      formattedDoc = sentences
+        .map(s => {
+          const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+          return spk ? `[${spk}]: ${s.text}` : s.text;
+        })
+        .join('\n\n');
+    }
+    el.fullDocumentText.textContent = formattedDoc || '（无转写文本）';
 
     // 3. SRT View
     el.srtCodeBlock.textContent = generateSrtText(sentences);
 
     // 4. JSON View
-    el.jsonCodeBlock.textContent = JSON.stringify(data, null, 2);
+    const enrichedData = { ...data };
+    if (sentences.length > 0) {
+      enrichedData.sentences = sentences.map(s => ({
+        ...s,
+        speaker_custom_name: s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : undefined,
+      }));
+    }
+    el.jsonCodeBlock.textContent = JSON.stringify(enrichedData, null, 2);
 
     // Initialize Audio Player duration
     el.playerTotalTime.textContent = durationStr;
     el.playerScrubber.value = 0;
 
-    // Scroll to results
-    el.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to results if initial render
+    if (shouldScroll) {
+      el.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   function seekAudioToMs(ms) {
@@ -1426,7 +1595,8 @@
       .map((s, idx) => {
         const begin = formatMsToSrt(s.begin_time || 0);
         const end = formatMsToSrt(s.end_time || 0);
-        const label = s.speaker_label ? `[${s.speaker_label}] ` : '';
+        const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+        const label = spk ? `[${spk}] ` : '';
         return `${idx + 1}\n${begin} --> ${end}\n${label}${s.text}\n`;
       })
       .join('\n');
@@ -1446,7 +1616,17 @@
       showToast('暂无可复制内容');
       return;
     }
-    navigator.clipboard.writeText(state.currentTranscriptData.full_text).then(() => {
+    const sentences = state.currentTranscriptData.sentences || [];
+    let textToCopy = state.currentTranscriptData.full_text;
+    if (sentences.length > 0) {
+      textToCopy = sentences
+        .map(s => {
+          const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+          return spk ? `[${spk}]: ${s.text}` : s.text;
+        })
+        .join('\n\n');
+    }
+    navigator.clipboard.writeText(textToCopy).then(() => {
       showToast('📋 全文已成功复制至剪贴板！');
     });
   }
@@ -1457,32 +1637,55 @@
       return;
     }
 
-    if (state.currentSessionId) {
+    const hasCustomSpeakers = state.speakerNames && Object.keys(state.speakerNames).length > 0;
+
+    if (state.currentSessionId && !hasCustomSpeakers) {
       const tokenQuery = state.authPasscode ? `?token=${encodeURIComponent(state.authPasscode)}` : '';
       window.location.href = `/api/export/${state.currentSessionId}/${format}${tokenQuery}`;
       showToast(`正在下载 .${format} 文件...`);
     } else {
-      // Local client fallback
+      // Client-side export with custom speaker names applied
       let blob, filename;
-      const fullText = state.currentTranscriptData.full_text || '';
       const sentences = state.currentTranscriptData.sentences || [];
+      const baseName = state.currentTranscriptData.filename ? state.currentTranscriptData.filename.replace(/\.[^/.]+$/, '') : 'transcript';
 
       if (format === 'txt') {
-        blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
-        filename = 'transcript.txt';
+        let txt = state.currentTranscriptData.full_text || '';
+        if (sentences.length > 0) {
+          txt = sentences
+            .map(s => {
+              const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+              return spk ? `[${spk}]: ${s.text}` : s.text;
+            })
+            .join('\n\n');
+        }
+        blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        filename = `${baseName}_transcript.txt`;
       } else if (format === 'srt') {
         blob = new Blob([generateSrtText(sentences)], { type: 'text/plain;charset=utf-8' });
-        filename = 'transcript.srt';
+        filename = `${baseName}_subtitles.srt`;
       } else if (format === 'json') {
-        blob = new Blob([JSON.stringify(state.currentTranscriptData, null, 2)], { type: 'application/json;charset=utf-8' });
-        filename = 'transcript.json';
+        const enriched = { ...state.currentTranscriptData };
+        if (sentences.length > 0) {
+          enriched.sentences = sentences.map(s => ({
+            ...s,
+            speaker_custom_name: s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : undefined,
+          }));
+        }
+        blob = new Blob([JSON.stringify(enriched, null, 2)], { type: 'application/json;charset=utf-8' });
+        filename = `${baseName}_transcript.json`;
       } else if (format === 'md') {
-        let md = `# Audio Transcription\n\n- Model: \`${state.model}\`\n\n## Transcript\n\n${fullText}\n\n## Dialogue\n\n`;
-        sentences.forEach((s) => {
-          md += `- \`[${s.begin_time_str || ''} -> ${s.end_time_str || ''}]\` ${s.speaker_label ? `**${s.speaker_label}**: ` : ''}${s.text}\n`;
-        });
+        let md = `# Audio Transcription\n\n- Model: \`${state.model}\`\n\n## Transcript\n\n`;
+        if (sentences.length > 0) {
+          sentences.forEach((s) => {
+            const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+            md += `- \`[${s.begin_time_str || ''} -> ${s.end_time_str || ''}]\` ${spk ? `**${spk}**: ` : ''}${s.text}\n`;
+          });
+        } else {
+          md += (state.currentTranscriptData.full_text || '') + '\n';
+        }
         blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-        filename = 'transcript.md';
+        filename = `${baseName}_transcript.md`;
       }
 
       if (blob) {

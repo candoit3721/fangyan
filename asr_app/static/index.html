@@ -657,6 +657,33 @@
       </div>
     </div>
 
+    <!-- Rename Speaker Modal -->
+    <div id="renameSpeakerModal" class="modal-overlay hidden">
+      <div class="modal-card rename-speaker-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>👤 修改说话人名称</h3>
+            <p class="text-muted text-xs">修改后将同步更新对话视图、全文及导出文件</p>
+          </div>
+          <button type="button" id="closeRenameSpeakerBtn" class="modal-close-btn">✕</button>
+        </div>
+        <form id="renameSpeakerForm" class="p-4">
+          <div class="form-group">
+            <label class="form-label" for="customSpeakerNameInput">
+              <span id="renameSpeakerOriginLabel">说话人编号: 0</span>
+              <span class="text-muted text-xs">自定义名称 (最多3字)</span>
+            </label>
+            <input type="text" id="customSpeakerNameInput" class="form-input font-mono" maxlength="3" placeholder="例如: 张三、王总、法官、A" autocomplete="off">
+          </div>
+          <div class="modal-footer" style="padding: 0.75rem 0 0; border: none; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" id="resetSpeakerNameBtn" class="btn btn-ghost btn-sm">恢复编号</button>
+            <button type="button" id="cancelRenameSpeakerBtn" class="btn btn-secondary btn-sm">取消</button>
+            <button type="submit" id="saveSpeakerNameBtn" class="btn btn-primary btn-sm">确认保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
