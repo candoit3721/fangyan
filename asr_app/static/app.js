@@ -129,6 +129,7 @@
     // Progress
     processingCard: document.getElementById('processingCard'),
     progressTitle: document.getElementById('progressTitle'),
+    progressModelBadge: document.getElementById('progressModelBadge'),
     progressSubtitle: document.getElementById('progressSubtitle'),
     progressBarFill: document.getElementById('progressBarFill'),
     progressTaskId: document.getElementById('progressTaskId'),
@@ -1152,11 +1153,26 @@
   }
 
   function showProgressCard(modelName) {
-    el.progressTitle.textContent = `正在使用 ${modelName} 处理录音...`;
-    el.progressSubtitle.textContent = '已提交任务至大模型，正在识别与时间戳对齐...';
-    el.progressTaskId.textContent = '正在初始化...';
-    el.processingCard.classList.remove('hidden');
-    el.resultsSection.classList.add('hidden');
+    let cleanModelName = modelName || state.model || '';
+    if (cleanModelName.includes('qwen-audio-3.0')) cleanModelName = 'Qwen 3.0 Flash';
+    else if (cleanModelName.includes('qwen3-asr-flash')) cleanModelName = 'Qwen 3.0 ASR';
+    else if (cleanModelName.includes('sensevoice')) cleanModelName = 'SenseVoice';
+    else if (cleanModelName.includes('paraformer-v2')) cleanModelName = 'Paraformer v2';
+    else if (cleanModelName.includes('paraformer-8k')) cleanModelName = 'Paraformer 8k';
+    else if (cleanModelName.includes('gemini-3.7')) cleanModelName = 'Gemini 3.7';
+    else if (cleanModelName.includes('gemini-3.5')) cleanModelName = 'Gemini 3.5';
+    else if (cleanModelName.includes('mimo')) cleanModelName = 'Xiaomi MiMo';
+    else if (cleanModelName.includes('gpt-audio')) cleanModelName = 'GPT Audio';
+
+    if (el.progressTitle) el.progressTitle.textContent = '正在智能语音转写中...';
+    if (el.progressModelBadge) {
+      el.progressModelBadge.textContent = cleanModelName;
+      el.progressModelBadge.title = modelName || '';
+    }
+    if (el.progressSubtitle) el.progressSubtitle.textContent = '已提交任务至大模型，正在转写与时间戳对齐...';
+    if (el.progressTaskId) el.progressTaskId.textContent = '正在初始化...';
+    if (el.processingCard) el.processingCard.classList.remove('hidden');
+    if (el.resultsSection) el.resultsSection.classList.add('hidden');
 
     state.pollStartTime = Date.now();
     updateProgressTimer();

@@ -196,25 +196,28 @@
         <div class="progress-header">
           <div class="progress-header-left">
             <div class="spinner-ring"></div>
-            <div>
-              <h3 id="progressTitle">正在使用模型处理录音...</h3>
-              <p id="progressSubtitle" class="text-muted">已提交任务至大模型服务，正在识别与时间戳对齐...</p>
+            <div class="progress-title-group">
+              <div class="progress-main-title">
+                <span id="progressTitle">正在智能语音转写中...</span>
+                <span id="progressModelBadge" class="badge badge-sm badge-gradient font-mono">Qwen 3.0</span>
+              </div>
+              <p id="progressSubtitle" class="progress-subtitle text-muted">已提交任务至大模型，正在识别与时间戳对齐...</p>
             </div>
           </div>
           <button type="button" id="cancelProcessingBtn" class="btn btn-secondary btn-sm" title="取消当前转写任务">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-            <span>取消转写</span>
+            <span>取消</span>
           </button>
         </div>
         <div class="progress-bar-track">
           <div id="progressBarFill" class="progress-bar-fill animate-indeterminate"></div>
         </div>
         <div class="progress-meta">
-          <span>Task ID: <code id="progressTaskId" class="font-mono">-</code></span>
-          <span id="progressTimer">耗时: 0s</span>
+          <span class="progress-meta-task">Task ID: <code id="progressTaskId" class="font-mono">-</code></span>
+          <span id="progressTimer" class="progress-meta-time">耗时: 0s</span>
         </div>
       </section>
 
