@@ -852,7 +852,8 @@
 
         el.recordedAudioPlayer.src = audioUrl;
         el.recordedPreviewCard.classList.remove('hidden');
-        el.recordingStatusHint.textContent = '录音已就绪，可预览或直接提交转写';
+        el.startRecordBtn.classList.add('hidden');
+        el.recordingStatusHint.classList.add('hidden');
         el.startRecordBtn.classList.remove('recording');
 
         // Stop stream tracks
