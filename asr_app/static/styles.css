@@ -2032,7 +2032,24 @@ input:checked + .toggle-slider:before {
     align-items: flex-end;
   }
 
-  .modal-card {
+  /* Specific Centering for Login Passcode Modal (Prevent sitting too low on mobile) */
+  #loginModal.modal-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+  }
+
+  #loginModal .login-modal-card {
+    border-radius: var(--radius-lg) !important;
+    max-width: 360px !important;
+    width: 100% !important;
+    margin: auto !important;
+    padding: 1.5rem 1.25rem !important;
+    transform: translateY(-5vh); /* Lifted to optimal eye and thumb level */
+    box-shadow: var(--shadow-lg);
+  }
+
+  #settingsModal .modal-card {
     width: 100%;
     max-width: 100%;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
