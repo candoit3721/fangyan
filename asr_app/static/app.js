@@ -1258,27 +1258,39 @@
   // Speaker Renaming Helpers & Modal Management
   // ==========================================================================
 
-  function extractSpeakerId(rawLabel) {
-    if (!rawLabel) return '0';
+  // ==========================================================================
+  // Speaker Renaming Helpers & Modal Management (1-based Speaker Indexing)
+  // ==========================================================================
+
+  function extractSpeakerId(rawLabel, speakerIdField) {
+    if (speakerIdField !== undefined && speakerIdField !== null && speakerIdField !== '') {
+      const num = parseInt(speakerIdField, 10);
+      if (!isNaN(num)) return String(num + 1);
+    }
+    if (!rawLabel) return '1';
     const str = String(rawLabel).trim();
     const match = str.match(/\d+/);
-    return match ? match[0] : str;
+    if (match) {
+      const num = parseInt(match[0], 10);
+      return String(num === 0 ? 1 : num);
+    }
+    return str;
   }
 
-  function getSpeakerDisplayName(rawLabel) {
-    if (!rawLabel) return '';
-    const id = extractSpeakerId(rawLabel);
+  function getSpeakerDisplayName(rawLabel, speakerIdField) {
+    if (!rawLabel && (speakerIdField === undefined || speakerIdField === null)) return '';
+    const id = extractSpeakerId(rawLabel, speakerIdField);
     if (state.speakerNames && state.speakerNames[id]) {
       return state.speakerNames[id].slice(0, 3);
     }
     return id;
   }
 
-  function getSpeakerColorIndex(rawLabel) {
-    const id = extractSpeakerId(rawLabel);
+  function getSpeakerColorIndex(rawLabel, speakerIdField) {
+    const id = extractSpeakerId(rawLabel, speakerIdField);
     const num = parseInt(id, 10);
     if (!isNaN(num)) {
-      return Math.abs(num) % 6;
+      return Math.abs(num - 1) % 6;
     }
     let hash = 0;
     for (let i = 0; i < id.length; i++) {
@@ -1287,11 +1299,14 @@
     return hash;
   }
 
-  function openRenameSpeakerModal(rawLabel) {
-    const id = extractSpeakerId(rawLabel);
+  function openRenameSpeakerModal(rawLabel, speakerIdField) {
+    const id = extractSpeakerId(rawLabel, speakerIdField);
     state.renamingSpeakerId = id;
     if (el.renameSpeakerOriginLabel) {
       el.renameSpeakerOriginLabel.textContent = `说话人编号: ${id}`;
+    }
+    if (el.resetSpeakerNameBtn) {
+      el.resetSpeakerNameBtn.textContent = `恢复默认 (${id})`;
     }
     if (el.customSpeakerNameInput) {
       el.customSpeakerNameInput.value = state.speakerNames[id] || '';
@@ -1365,7 +1380,7 @@
     el.metaSentenceCount.textContent = sentences.length;
     el.metaCharCount.textContent = fullText.length;
 
-    // 1. Dialogue Sentence List (2-Row Layout with Speaker Badges)
+    // 1. Dialogue Sentence List (2-Row Layout with 1-based Speaker Badges)
     el.sentenceList.innerHTML = '';
     if (sentences.length === 0 && fullText) {
       // Fallback single block
@@ -1382,10 +1397,10 @@
         card.dataset.end = s.end_time;
 
         let speakerPillHtml = '';
-        if (s.speaker_label) {
-          const speakerId = extractSpeakerId(s.speaker_label);
-          const displayName = getSpeakerDisplayName(s.speaker_label);
-          const colorIdx = getSpeakerColorIndex(s.speaker_label);
+        if (s.speaker_label || s.speaker_id !== undefined) {
+          const speakerId = extractSpeakerId(s.speaker_label, s.speaker_id);
+          const displayName = getSpeakerDisplayName(s.speaker_label, s.speaker_id);
+          const colorIdx = getSpeakerColorIndex(s.speaker_label, s.speaker_id);
           speakerPillHtml = `
             <button type="button" class="speaker-pill speaker-color-${colorIdx}" data-speaker-id="${speakerId}" title="点击重命名此说话人 (最多3字)">
               <svg class="speaker-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -1421,7 +1436,7 @@
         if (speakerBtn) {
           speakerBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            openRenameSpeakerModal(s.speaker_label);
+            openRenameSpeakerModal(s.speaker_label, s.speaker_id);
           });
         }
 
@@ -1439,7 +1454,7 @@
     if (sentences.length > 0) {
       formattedDoc = sentences
         .map(s => {
-          const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+          const spk = (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : '';
           return spk ? `[${spk}]: ${s.text}` : s.text;
         })
         .join('\n\n');
@@ -1454,7 +1469,7 @@
     if (sentences.length > 0) {
       enrichedData.sentences = sentences.map(s => ({
         ...s,
-        speaker_custom_name: s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : undefined,
+        speaker_custom_name: (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : undefined,
       }));
     }
     el.jsonCodeBlock.textContent = JSON.stringify(enrichedData, null, 2);
@@ -1596,7 +1611,7 @@
       .map((s, idx) => {
         const begin = formatMsToSrt(s.begin_time || 0);
         const end = formatMsToSrt(s.end_time || 0);
-        const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+        const spk = (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : '';
         const label = spk ? `[${spk}] ` : '';
         return `${idx + 1}\n${begin} --> ${end}\n${label}${s.text}\n`;
       })
@@ -1622,7 +1637,7 @@
     if (sentences.length > 0) {
       textToCopy = sentences
         .map(s => {
-          const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+          const spk = (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : '';
           return spk ? `[${spk}]: ${s.text}` : s.text;
         })
         .join('\n\n');
@@ -1655,7 +1670,7 @@
         if (sentences.length > 0) {
           txt = sentences
             .map(s => {
-              const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+              const spk = (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : '';
               return spk ? `[${spk}]: ${s.text}` : s.text;
             })
             .join('\n\n');
@@ -1670,7 +1685,7 @@
         if (sentences.length > 0) {
           enriched.sentences = sentences.map(s => ({
             ...s,
-            speaker_custom_name: s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : undefined,
+            speaker_custom_name: (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : undefined,
           }));
         }
         blob = new Blob([JSON.stringify(enriched, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -1679,7 +1694,7 @@
         let md = `# Audio Transcription\n\n- Model: \`${state.model}\`\n\n## Transcript\n\n`;
         if (sentences.length > 0) {
           sentences.forEach((s) => {
-            const spk = s.speaker_label ? getSpeakerDisplayName(s.speaker_label) : '';
+            const spk = (s.speaker_label || s.speaker_id !== undefined) ? getSpeakerDisplayName(s.speaker_label, s.speaker_id) : '';
             md += `- \`[${s.begin_time_str || ''} -> ${s.end_time_str || ''}]\` ${spk ? `**${spk}**: ` : ''}${s.text}\n`;
           });
         } else {
