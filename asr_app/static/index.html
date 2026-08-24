@@ -346,9 +346,10 @@
         </div>
       </section>
     </main>
+  </div>
 
-    <!-- Settings Modal Drawer -->
-    <div id="settingsModal" class="modal-overlay hidden">
+  <!-- Settings Modal Drawer -->
+  <div id="settingsModal" class="modal-overlay hidden">
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-title-group">
@@ -642,7 +643,7 @@
         </div>
         <form id="loginForm" class="login-form" onsubmit="return false;">
           <div class="input-with-action">
-            <input type="password" id="loginPasscodeInput" class="form-input font-mono" placeholder="输入访问 Passcode..." autocomplete="current-password" autofocus>
+            <input type="password" id="loginPasscodeInput" class="form-input font-mono" placeholder="输入访问 Passcode..." autocomplete="current-password">
             <button type="button" id="toggleLoginPasscodeVisibility" class="btn-icon btn-ghost" title="显示/隐藏">👁️</button>
           </div>
           <div id="loginErrorMsg" class="login-error-hint hidden"></div>
@@ -652,7 +653,6 @@
         </form>
       </div>
     </div>
-  </div>
 
   <script src="/app.js"></script>
 </body>
