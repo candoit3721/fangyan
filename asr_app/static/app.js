@@ -102,7 +102,10 @@
     recordPanel: document.getElementById('recordPanel'),
     uploadPanel: document.getElementById('uploadPanel'),
 
-    // Recorder Controls
+    // Recorder Panels & Controls
+    recorderLeftPanel: document.getElementById('recorderLeftPanel'),
+    recorderRightPanel: document.getElementById('recorderRightPanel'),
+    rightPanelHint: document.getElementById('rightPanelHint'),
     visualizerCanvas: document.getElementById('visualizerCanvas'),
     recordingTimer: document.getElementById('recordingTimer'),
     startRecordBtn: document.getElementById('startRecordBtn'),
@@ -112,7 +115,6 @@
     stopRecordBtn: document.getElementById('stopRecordBtn'),
     cancelRecordBtn: document.getElementById('cancelRecordBtn'),
     recordingStatusHint: document.getElementById('recordingStatusHint'),
-    recordedPreviewCard: document.getElementById('recordedPreviewCard'),
     recordedAudioPlayer: document.getElementById('recordedAudioPlayer'),
     recordedDurationTag: document.getElementById('recordedDurationTag'),
     transcribeRecordedBtn: document.getElementById('transcribeRecordedBtn'),
@@ -850,12 +852,19 @@
         const audioUrl = URL.createObjectURL(state.recordedBlob);
         state.activeAudioUrl = audioUrl;
 
-        el.recordedAudioPlayer.src = audioUrl;
-        el.recordedPreviewCard.classList.remove('hidden');
-        document.querySelector('.recorder-layout-split')?.classList.add('has-preview');
-        el.startRecordBtn.classList.add('hidden');
-        el.recordingStatusHint.classList.add('hidden');
+        // 1. Disable & Lock Left Panel (Recording Side)
+        if (el.recorderLeftPanel) el.recorderLeftPanel.classList.add('panel-disabled');
+        el.recordingStatusHint.textContent = '✅ 录音已完成，请在右侧试听或提交转写';
+        el.startRecordBtn.classList.remove('hidden');
         el.startRecordBtn.classList.remove('recording');
+        el.recordingActiveActions.classList.add('hidden');
+
+        // 2. Enable & Activate Right Panel (Playback & Transcribe Side)
+        if (el.recorderRightPanel) el.recorderRightPanel.classList.remove('panel-disabled');
+        if (el.reRecordBtn) el.reRecordBtn.disabled = false;
+        if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.disabled = false;
+        if (el.rightPanelHint) el.rightPanelHint.textContent = '可试听录音效果，或点击按钮开始智能转写';
+        if (el.recordedAudioPlayer) el.recordedAudioPlayer.src = audioUrl;
 
         // Stop stream tracks
         stream.getTracks().forEach((t) => t.stop());
@@ -871,13 +880,16 @@
       state.isPaused = false;
       state.recordStartTime = Date.now();
 
-      // UI updates
-      document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
+      // UI updates (Active Recording State)
+      if (el.recorderLeftPanel) el.recorderLeftPanel.classList.remove('panel-disabled');
       el.startRecordBtn.classList.add('recording');
       el.startRecordBtn.classList.add('hidden');
       el.recordingActiveActions.classList.remove('hidden');
-      el.recordedPreviewCard.classList.add('hidden');
       el.recordingStatusHint.textContent = '🎙️ 正在录音中... 说话声音将被实时采集';
+
+      if (el.recorderRightPanel) el.recorderRightPanel.classList.add('panel-disabled');
+      if (el.reRecordBtn) el.reRecordBtn.disabled = true;
+      if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.disabled = true;
 
       // Start timer
       clearInterval(state.recordTimerInterval);
@@ -933,14 +945,25 @@
     state.recordedBlob = null;
     state.activeAudioUrl = null;
     el.recordingTimer.textContent = '00:00.00';
-    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
+
+    // 1. Re-enable Left Panel
+    if (el.recorderLeftPanel) el.recorderLeftPanel.classList.remove('panel-disabled');
     el.recordingActiveActions.classList.add('hidden');
     el.startRecordBtn.classList.remove('hidden');
     el.startRecordBtn.classList.remove('recording');
-    el.recordedPreviewCard.classList.add('hidden');
-    el.recordingStatusHint.classList.remove('hidden');
-    el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉您的语音';
+    el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉语音';
     initVisualizerCanvas();
+
+    // 2. Disable Right Panel
+    if (el.recorderRightPanel) el.recorderRightPanel.classList.add('panel-disabled');
+    if (el.reRecordBtn) el.reRecordBtn.disabled = true;
+    if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.disabled = true;
+    if (el.recordedAudioPlayer) {
+      el.recordedAudioPlayer.removeAttribute('src');
+      el.recordedAudioPlayer.load();
+    }
+    if (el.recordedDurationTag) el.recordedDurationTag.textContent = '00:00';
+    if (el.rightPanelHint) el.rightPanelHint.textContent = '录音完成后可在此试听并提交转写';
   }
 
   function updateRecordTimer() {
@@ -1110,17 +1133,18 @@
     // UI Loading State
     showProgressCard(state.model);
 
-    // Hide input preview cards on submission to eliminate duplicate controls
-    el.recordedPreviewCard.classList.add('hidden');
-    el.uploadedFileCard.classList.add('hidden');
-    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
+    // Reset two-panel recorder state
+    if (el.recorderLeftPanel) el.recorderLeftPanel.classList.remove('panel-disabled');
+    if (el.recorderRightPanel) el.recorderRightPanel.classList.add('panel-disabled');
+    if (el.reRecordBtn) el.reRecordBtn.disabled = true;
+    if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.disabled = true;
     el.startRecordBtn.classList.remove('hidden');
     el.startRecordBtn.classList.remove('recording');
     el.recordingActiveActions.classList.add('hidden');
-    el.recordingStatusHint.classList.remove('hidden');
-    el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉您的语音';
+    el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉语音';
     el.recordingTimer.textContent = '00:00.00';
     initVisualizerCanvas();
+    if (el.uploadedFileCard) el.uploadedFileCard.classList.add('hidden');
 
     // Abort previous in-flight request if any
     if (state.transcribeAbortController) {
@@ -1386,10 +1410,12 @@
     state.currentTranscriptData = data;
     el.resultsSection.classList.remove('hidden');
 
-    // Ensure input preview cards are hidden so the persistent synchronized player is the sole player
-    el.recordedPreviewCard.classList.add('hidden');
-    el.uploadedFileCard.classList.add('hidden');
-    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
+    // Ensure two-panel recorder state is clean
+    if (el.recorderLeftPanel) el.recorderLeftPanel.classList.remove('panel-disabled');
+    if (el.recorderRightPanel) el.recorderRightPanel.classList.add('panel-disabled');
+    if (el.reRecordBtn) el.reRecordBtn.disabled = true;
+    if (el.transcribeRecordedBtn) el.transcribeRecordedBtn.disabled = true;
+    if (el.uploadedFileCard) el.uploadedFileCard.classList.add('hidden');
 
     const fullText = data.full_text || '';
     const sentences = data.sentences || [];
