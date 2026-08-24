@@ -1110,6 +1110,18 @@
     // UI Loading State
     showProgressCard(state.model);
 
+    // Hide input preview cards on submission to eliminate duplicate controls
+    el.recordedPreviewCard.classList.add('hidden');
+    el.uploadedFileCard.classList.add('hidden');
+    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
+    el.startRecordBtn.classList.remove('hidden');
+    el.startRecordBtn.classList.remove('recording');
+    el.recordingActiveActions.classList.add('hidden');
+    el.recordingStatusHint.classList.remove('hidden');
+    el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉您的语音';
+    el.recordingTimer.textContent = '00:00.00';
+    initVisualizerCanvas();
+
     // Abort previous in-flight request if any
     if (state.transcribeAbortController) {
       try { state.transcribeAbortController.abort(); } catch (e) {}
@@ -1373,6 +1385,11 @@
   function renderTranscriptionResults(data, shouldScroll = true) {
     state.currentTranscriptData = data;
     el.resultsSection.classList.remove('hidden');
+
+    // Ensure input preview cards are hidden so the persistent synchronized player is the sole player
+    el.recordedPreviewCard.classList.add('hidden');
+    el.uploadedFileCard.classList.add('hidden');
+    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
 
     const fullText = data.full_text || '';
     const sentences = data.sentences || [];
