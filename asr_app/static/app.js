@@ -13,7 +13,7 @@
 
   // State Management
   const state = {
-    authPasscode: sessionStorage.getItem('app_passcode') || localStorage.getItem('app_passcode') || '',
+    authPasscode: sessionStorage.getItem('app_passcode') || '',
     authRequired: false,
 
     // Active Provider: 'openrouter' | 'dashscope'
@@ -252,7 +252,7 @@
       headers['Authorization'] = `Bearer ${state.authPasscode}`;
       headers['X-App-Passcode'] = state.authPasscode;
     }
-    const mergedOptions = { ...options, headers };
+    const mergedOptions = { credentials: 'same-origin', ...options, headers };
     const resp = await fetch(url, mergedOptions);
 
     if (resp.status === 401) {
@@ -283,15 +283,19 @@
 
   async function checkAuthStatus() {
     try {
-      const resp = await fetch('/api/auth/status');
+      const resp = await apiFetch('/api/auth/status');
       if (resp.ok) {
         const data = await resp.json();
         state.authRequired = Boolean(data.auth_required);
         if (state.authRequired) {
           if (el.lockAppBtn) el.lockAppBtn.classList.remove('hidden');
-          if (!data.authenticated) {
+          if (data.authenticated) {
+            hideLoginModal();
+          } else {
             showLoginModal();
           }
+        } else {
+          hideLoginModal();
         }
       }
     } catch (e) {
@@ -340,7 +344,7 @@
       if (resp.ok && data.success) {
         state.authPasscode = passcode;
         sessionStorage.setItem('app_passcode', passcode);
-        localStorage.setItem('app_passcode', passcode);
+        localStorage.removeItem('app_passcode');
         hideLoginModal();
         showToast('🔓 访问权限验证成功');
         loadServerConfig();
@@ -361,10 +365,13 @@
     }
   }
 
-  function lockApp() {
+  async function lockApp() {
     state.authPasscode = '';
     sessionStorage.removeItem('app_passcode');
     localStorage.removeItem('app_passcode');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
     showLoginModal();
     showToast('🔒 会话已锁定');
   }

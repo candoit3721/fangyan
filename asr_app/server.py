@@ -126,7 +126,7 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         # Concise logging
         logger.info("%s - %s", self.address_string(), format % args)
 
-    def _send_json(self, data: Any, status: int = 200):
+    def _send_json(self, data: Any, status: int = 200, headers: Optional[Dict[str, str]] = None):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -134,6 +134,9 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        if headers:
+            for k, v in headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -401,11 +404,12 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                 required = os.environ.get("APP_PASSCODE", "").strip() or os.environ.get("ACCESS_TOKEN", "").strip() or os.environ.get("AUTH_PASSCODE", "").strip()
 
                 if not required or passcode == required:
+                    cookie_val = f"app_passcode={urllib.parse.quote(passcode or 'auth')}; Path=/; SameSite=Lax"
                     return self._send_json({
                         "success": True,
                         "token": passcode or "authenticated",
                         "message": "Passcode verified successfully",
-                    })
+                    }, headers={"Set-Cookie": cookie_val})
                 else:
                     return self._send_json({
                         "success": False,
@@ -413,6 +417,11 @@ class ASRRequestHandler(SimpleHTTPRequestHandler):
                     }, 401)
             except Exception as e:
                 return self._send_error(str(e), 400)
+
+        # Logout endpoint
+        if path == "/api/auth/logout":
+            cookie_val = "app_passcode=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax"
+            return self._send_json({"success": True, "message": "Logged out successfully"}, headers={"Set-Cookie": cookie_val})
 
         # Enforce authentication on all other POST /api/ routes
         if path.startswith("/api/") and self._is_auth_required() and not self._is_authenticated():
