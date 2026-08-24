@@ -1325,7 +1325,7 @@ body {
    Login Passcode Modal Gate
    ========================================================================== */
 
-#loginModal {
+#loginModal:not(.hidden) {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   width: 100vw;
@@ -2085,7 +2085,7 @@ input:checked + .toggle-slider:before {
   }
 
   /* Specific Centering for Login Passcode Modal (Grid place-items: center guarantees exact pixel symmetry) */
-  #loginModal {
+  #loginModal:not(.hidden) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -2233,4 +2233,15 @@ input:checked + .toggle-slider:before {
     width: 86vw;
     max-width: 320px;
   }
+}
+
+/* Absolute Hidden Override Safeguard */
+.hidden,
+#loginModal.hidden,
+#settingsModal.hidden,
+#historyDrawer.hidden,
+.modal-overlay.hidden,
+.drawer-overlay.hidden,
+[hidden] {
+  display: none !important;
 }
