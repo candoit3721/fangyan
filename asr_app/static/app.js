@@ -302,9 +302,9 @@
   function showLoginModal() {
     if (el.loginModal) {
       el.loginModal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
       if (el.loginPasscodeInput) {
         el.loginPasscodeInput.value = '';
-        el.loginPasscodeInput.focus();
       }
       if (el.loginErrorMsg) el.loginErrorMsg.classList.add('hidden');
     }
@@ -313,6 +313,7 @@
   function hideLoginModal() {
     if (el.loginModal) {
       el.loginModal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
     }
   }
 
