@@ -852,6 +852,7 @@
 
         el.recordedAudioPlayer.src = audioUrl;
         el.recordedPreviewCard.classList.remove('hidden');
+        document.querySelector('.recorder-layout-split')?.classList.add('has-preview');
         el.startRecordBtn.classList.add('hidden');
         el.recordingStatusHint.classList.add('hidden');
         el.startRecordBtn.classList.remove('recording');
@@ -871,6 +872,7 @@
       state.recordStartTime = Date.now();
 
       // UI updates
+      document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
       el.startRecordBtn.classList.add('recording');
       el.startRecordBtn.classList.add('hidden');
       el.recordingActiveActions.classList.remove('hidden');
@@ -931,10 +933,12 @@
     state.recordedBlob = null;
     state.activeAudioUrl = null;
     el.recordingTimer.textContent = '00:00.00';
+    document.querySelector('.recorder-layout-split')?.classList.remove('has-preview');
     el.recordingActiveActions.classList.add('hidden');
     el.startRecordBtn.classList.remove('hidden');
     el.startRecordBtn.classList.remove('recording');
     el.recordedPreviewCard.classList.add('hidden');
+    el.recordingStatusHint.classList.remove('hidden');
     el.recordingStatusHint.textContent = '点击麦克风按钮开始清晰捕捉您的语音';
     initVisualizerCanvas();
   }

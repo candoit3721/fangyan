@@ -358,20 +358,35 @@ body {
 }
 
 /* ==========================================================================
-   Polished Microphone Recorder (Compact & Clean)
+   Polished Microphone Recorder (Desktop Side-by-Side & Mobile Vertical)
    ========================================================================== */
 
 .recorder-container {
+  width: 100%;
+  padding: 0.25rem 0;
+}
+
+.recorder-layout-split {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  transition: all 0.25s ease;
+}
+
+.recorder-visual-pane {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .visualizer-wrapper {
   width: 100%;
-  max-width: 680px;
   height: 68px;
   background: #ffffff;
   border: 1px solid var(--border-color);
@@ -411,8 +426,8 @@ body {
 
 /* Polished Glowing Action Button */
 .record-circle-btn {
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: linear-gradient(135deg, #f43f5e, #e11d48, #be123c);
   border: none;
@@ -446,8 +461,8 @@ body {
 }
 
 .record-icon-inner {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -456,8 +471,8 @@ body {
 }
 
 .record-icon-inner svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 /* When Recording */
@@ -497,21 +512,21 @@ body {
 .status-hint {
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-top: -0.2rem;
+  text-align: center;
 }
 
 /* Audio Preview Box */
 .audio-preview-box {
   width: 100%;
-  max-width: 680px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
   box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
 }
 
 .preview-header {
@@ -543,6 +558,35 @@ body {
   display: flex;
   gap: 0.65rem;
   justify-content: flex-end;
+}
+
+/* Desktop Side-by-Side when preview is active */
+@media (min-width: 769px) {
+  .recorder-layout-split.has-preview {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 1.25rem;
+    align-items: stretch;
+    max-width: 900px;
+  }
+
+  .recorder-layout-split.has-preview .recorder-visual-pane {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.5rem;
+    height: 100%;
+  }
+
+  .recorder-layout-split.has-preview .visualizer-wrapper {
+    height: 68px;
+    width: 100%;
+  }
+
+  .recorder-layout-split.has-preview .audio-preview-box {
+    height: 100%;
+    justify-content: space-between;
+  }
 }
 
 /* Upload Drop Zone */
@@ -1166,12 +1210,12 @@ body {
 
 /* Rename Speaker Modal Styling */
 .rename-speaker-modal-card {
-  max-width: 440px;
-  width: 92%;
+  max-width: 440px !important;
+  width: 90% !important;
   margin: auto;
   background: #ffffff;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--border-color);
   overflow: hidden;
   display: flex;
@@ -1179,7 +1223,7 @@ body {
 }
 
 .rename-speaker-modal-card .modal-header {
-  padding: 1.25rem 1.5rem 1rem;
+  padding: 1.35rem 1.75rem 1.15rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: flex-start;
@@ -1188,18 +1232,19 @@ body {
 }
 
 .rename-speaker-form {
-  padding: 1.5rem 1.5rem 1.25rem;
+  padding: 1.65rem 1.75rem 1.5rem !important;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.35rem;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .form-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.65rem;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-main);
@@ -1212,7 +1257,7 @@ body {
 
 .rename-speaker-form .form-input {
   width: 100%;
-  padding: 0.7rem 0.9rem;
+  padding: 0.8rem 1rem;
   font-size: 0.95rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
@@ -1230,7 +1275,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.65rem;
+  gap: 0.75rem;
   padding-top: 0.5rem;
   border: none;
 }
